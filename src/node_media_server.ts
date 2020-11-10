@@ -20,7 +20,7 @@ export interface INodeMediaServerConfig {
     ping_timeout: number;
   };
   http: {
-    port: number;
+    port: number | string;
     allow_origin: string;
   };
   api: {
