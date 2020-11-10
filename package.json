@@ -9,7 +9,7 @@
     "lint:fix": "eslint . --fix && prettier --write \"**/*.{ts,js,json,html,css,scss,md}\"",
     "start": "ts-node index.ts",
     "build": "tsc",
-    "release": "yarn build && yarn publish"
+    "postinstall": "yarn build"
   },
   "dependencies": {
     "bitop": "^0.0.1",
