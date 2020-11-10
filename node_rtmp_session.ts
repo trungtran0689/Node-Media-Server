@@ -17,6 +17,7 @@ import { BufferPool } from './node_core_bufferpool';
 import { nodeEvent } from './node_core_utils';
 import { NodeFlvSession } from './node_flv_session';
 import { generateS0S1S2 } from './node_rtmp_handshake';
+import { INodeMediaServerConfig } from './node_media_server';
 
 const EXTENDED_TIMESTAMP_TYPE_NOT_USED = 'not-used';
 const EXTENDED_TIMESTAMP_TYPE_ABSOLUTE = 'absolute';
@@ -69,7 +70,7 @@ const VIDEO_CODEC_NAME = [
 ];
 
 export class NodeRtmpSession extends EventEmitter {
-  config: any;
+  config: INodeMediaServerConfig;
 
   bp: BufferPool;
   nodeEvent: EventEmitter;

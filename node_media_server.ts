@@ -11,8 +11,25 @@ import { NodeRtmpServer } from './node_rtmp_server';
 import { getStreams } from './api/controllers/streams';
 import { authCheck } from './api/middleware/auth';
 
+export interface INodeMediaServerConfig {
+  rtmp: {
+    port: number;
+    chunk_size: number;
+    gop_cache: boolean;
+    ping: number;
+    ping_timeout: number;
+  };
+  http: {
+    port: number;
+    allow_origin: string;
+  };
+  api: {
+    token: string;
+  };
+}
+
 export class NodeMediaServer {
-  config: any;
+  config: INodeMediaServerConfig;
 
   sessions: Map<string, any>;
   publishers: Map<string, string>;
@@ -22,7 +39,7 @@ export class NodeMediaServer {
   nrs: NodeRtmpServer;
   nhs: NodeHttpServer;
 
-  constructor(config) {
+  constructor(config: INodeMediaServerConfig) {
     this.config = config;
 
     this.sessions = new Map();

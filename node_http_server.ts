@@ -9,11 +9,12 @@ import { Express } from 'express';
 
 import { generateNewSessionID } from './node_core_utils';
 import { NodeFlvSession } from './node_flv_session';
+import { INodeMediaServerConfig } from './node_media_server';
 
 const HTTP_PORT = 80;
 
 export class NodeHttpServer {
-  config: any;
+  config: INodeMediaServerConfig;
 
   port: number;
   sessions: Map<string, any>;

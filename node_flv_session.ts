@@ -9,9 +9,10 @@ import * as url from 'url';
 
 import { BufferPool } from './node_core_bufferpool';
 import { nodeEvent } from './node_core_utils';
+import { INodeMediaServerConfig } from './node_media_server';
 
 export class NodeFlvSession extends EventEmitter {
-  config: any;
+  config: INodeMediaServerConfig;
 
   req: IncomingMessage;
   res: ServerResponse;
