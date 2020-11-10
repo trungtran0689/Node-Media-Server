@@ -1,18 +1,23 @@
-//
 //  Created by Mingliang Chen on 17/8/1.
 //  illuspas[a]gmail.com
 //  Copyright (c) 2017 Nodemedia. All rights reserved.
-//
 
-const EventEmitter = require('events');
-const QueryString = require('querystring');
-const AAC = require('./node_core_aac');
+import { EventEmitter } from 'events';
+import * as qs from 'querystring';
+import * as net from 'net';
 
-const AMF = require('./node_core_amf');
-const Handshake = require('./node_rtmp_handshake');
-const BufferPool = require('./node_core_bufferpool');
-const NodeFlvSession = require('./node_flv_session');
-const NodeCoreUtils = require('./node_core_utils');
+import { getProfileName, readAudioSpecificConfig } from './node_core_aac';
+import {
+  decodeAmf0Cmd,
+  decodeAmf0Data,
+  encodeAmf0Cmd,
+  encodeAmf0Data,
+} from './node_core_amf';
+import { BufferPool } from './node_core_bufferpool';
+import { nodeEvent } from './node_core_utils';
+import { NodeFlvSession } from './node_flv_session';
+import { generateS0S1S2 } from './node_rtmp_handshake';
+import { INodeMediaServerConfig } from './node_media_server';
 
 const EXTENDED_TIMESTAMP_TYPE_NOT_USED = 'not-used';
 const EXTENDED_TIMESTAMP_TYPE_ABSOLUTE = 'absolute';
@@ -64,12 +69,66 @@ const VIDEO_CODEC_NAME = [
   'H265',
 ];
 
-class NodeRtmpSession extends EventEmitter {
+export class NodeRtmpSession extends EventEmitter {
+  config: INodeMediaServerConfig;
+
+  bp: BufferPool;
+  nodeEvent: EventEmitter;
+  socket: net.Socket;
+  players: Set<string>;
+  inChunkSize: number;
+  outChunkSize: number;
+  previousChunkMessage: any;
+  ping: number;
+  pingTimeout: number;
+  pingInterval: NodeJS.Timer;
+  isStarting: boolean;
+  isPublishing: boolean;
+  isPlaying: boolean;
+  isIdling: boolean;
+  isFirstAudioReceived: boolean;
+  isFirstVideoReceived: boolean;
+  metaData: any;
+  aacSequenceHeader: Buffer;
+  avcSequenceHeader: Buffer;
+  audioCodec: number;
+  audioCodecName: string;
+  audioProfileName: string;
+  audioSamplerate: number;
+  audioChannels: number;
+  videoCodec: number;
+  videoCodecName: string;
+  videoSize: string;
+  videoFps: number;
+  gopCacheEnable: boolean;
+  rtmpGopCacheQueue: Set<Buffer>;
+  flvGopCacheQueue: Set<Buffer>;
+  ackSize: number;
+  inLastAck: number;
+  appname: string;
+  streams: number;
+  playStreamId: number;
+  playStreamPath: string;
+  playArgs: qs.ParsedUrlQuery;
+  publishStreamId: number;
+  publishStreamPath: string;
+  publishArgs: qs.ParsedUrlQuery;
+  sessions: Map<string, any>;
+  publishers: Map<string, string>;
+  idlePlayers: Set<string>;
+  startTimestamp: number;
+  objectEncoding: number;
+  connectTime: Date;
+  id: string;
+  connectCmdObj: any;
+
   constructor(config, socket) {
     super();
+
     this.config = config;
+
     this.bp = new BufferPool();
-    this.nodeEvent = NodeCoreUtils.nodeEvent;
+    this.nodeEvent = nodeEvent;
     this.socket = socket;
     this.players = null;
 
@@ -117,11 +176,11 @@ class NodeRtmpSession extends EventEmitter {
 
     this.playStreamId = 0;
     this.playStreamPath = '';
-    this.playArgs = '';
+    this.playArgs = undefined;
 
     this.publishStreamId = 0;
     this.publishStreamPath = '';
-    this.publishArgs = '';
+    this.publishArgs = undefined;
 
     this.on('connect', this.onConnect);
     this.on('publish', this.onPublish);
@@ -186,7 +245,7 @@ class NodeRtmpSession extends EventEmitter {
       }
     }
     const c0c1 = this.bp.read(1537);
-    const s0s1s2 = Handshake.generateS0S1S2(c0c1);
+    const s0s1s2 = generateS0S1S2(c0c1);
     this.socket.write(s0s1s2);
 
     if (this.bp.need(1536)) {
@@ -199,7 +258,7 @@ class NodeRtmpSession extends EventEmitter {
     console.log('[rtmp message parser]  start');
     this.bp.readBytes = 0;
     while (this.isStarting) {
-      const message = {};
+      const message: any = {};
       let chunkMessageHeader = null;
       let previousChunk = null;
 
@@ -395,7 +454,7 @@ class NodeRtmpSession extends EventEmitter {
     this.onCloseStream(this.publishStreamId);
 
     if (this.pingInterval) {
-      clearImmediate(this.pingInterval);
+      clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
     this.nodeEvent.emit('doneConnect', this.id, this.connectCmdObj);
@@ -501,7 +560,7 @@ class NodeRtmpSession extends EventEmitter {
         // console.log('[rtmp handleRtmpMessage] Ack:' + rtmpBody.readUInt32BE());
         break;
       case 4:
-        const userControlMessage = {};
+        const userControlMessage: any = {};
         userControlMessage.eventType = rtmpBody.readUInt16BE();
         userControlMessage.eventData = rtmpBody.slice(2);
         this.handleUserControlMessage(userControlMessage);
@@ -520,22 +579,22 @@ class NodeRtmpSession extends EventEmitter {
         break;
       case 15:
         //AMF3 DataMessage
-        const amf3Data = AMF.decodeAmf0Data(rtmpBody.slice(1));
+        const amf3Data = decodeAmf0Data(rtmpBody.slice(1));
         this.handleAMFDataMessage(rtmpHeader.messageStreamID, amf3Data);
         break;
       case 17:
         //AMF3 CommandMessage
-        const amf3Cmd = AMF.decodeAmf0Cmd(rtmpBody.slice(1));
+        const amf3Cmd = decodeAmf0Cmd(rtmpBody.slice(1));
         this.handleAMFCommandMessage(rtmpHeader.messageStreamID, amf3Cmd);
         break;
       case 18:
         //AMF0 DataMessage
-        const amf0Data = AMF.decodeAmf0Data(rtmpBody);
+        const amf0Data = decodeAmf0Data(rtmpBody);
         this.handleAMFDataMessage(rtmpHeader.messageStreamID, amf0Data);
         break;
       case 20:
         //AMF0 CommandMessage
-        const amf0Cmd = AMF.decodeAmf0Cmd(rtmpBody);
+        const amf0Cmd = decodeAmf0Cmd(rtmpBody);
         this.handleAMFCommandMessage(rtmpHeader.messageStreamID, amf0Cmd);
         break;
     }
@@ -566,7 +625,7 @@ class NodeRtmpSession extends EventEmitter {
             cmd: 'onMetaData',
             cmdObj: dataMessage.dataObj,
           };
-          this.metaData = AMF.encodeAmf0Data(opt);
+          this.metaData = encodeAmf0Data(opt);
           this.audioSamplerate = dataMessage.dataObj.audiosamplerate;
           this.audioChannels = dataMessage.dataObj.stereo ? 2 : 1;
           this.videoSize =
@@ -594,9 +653,7 @@ class NodeRtmpSession extends EventEmitter {
       case 'publish':
         this.publishStreamPath =
           '/' + this.appname + '/' + commandMessage.streamName.split('?')[0];
-        this.publishArgs = QueryString.parse(
-          commandMessage.streamName.split('?')[1],
-        );
+        this.publishArgs = qs.parse(commandMessage.streamName.split('?')[1]);
         this.publishStreamId = streamID;
         // console.log('publish streamID=' + streamID);
         this.emit('publish');
@@ -604,9 +661,7 @@ class NodeRtmpSession extends EventEmitter {
       case 'play':
         this.playStreamPath =
           '/' + this.appname + '/' + commandMessage.streamName.split('?')[0];
-        this.playArgs = QueryString.parse(
-          commandMessage.streamName.split('?')[1],
-        );
+        this.playArgs = qs.parse(commandMessage.streamName.split('?')[1]);
         this.playStreamId = streamID;
         // console.log('play streamID=' + streamID);
         this.emit('play');
@@ -656,10 +711,10 @@ class NodeRtmpSession extends EventEmitter {
       if (sound_format === 10) {
         //cache aac sequence header
         if (rtmpBody[1] === 0) {
-          this.aacSequenceHeader = new Buffer(rtmpBody);
+          this.aacSequenceHeader = Buffer.from(rtmpBody);
           this.isFirstAudioReceived = true;
-          const info = AAC.readAudioSpecificConfig(this.aacSequenceHeader);
-          this.audioProfileName = AAC.getProfileName(info);
+          const info = readAudioSpecificConfig(this.aacSequenceHeader);
+          this.audioProfileName = getProfileName(info);
           this.audioSamplerate = info.sample_rate;
           this.audioChannels = info.channels;
         }
@@ -714,7 +769,7 @@ class NodeRtmpSession extends EventEmitter {
       if (codec_id === 7 || codec_id === 12) {
         //cache avc sequence header
         if (frame_type === 1 && rtmpBody[1] === 0) {
-          this.avcSequenceHeader = new Buffer(rtmpBody);
+          this.avcSequenceHeader = Buffer.from(rtmpBody);
           this.isFirstVideoReceived = true;
           this.rtmpGopCacheQueue = this.gopCacheEnable ? new Set() : null;
           this.flvGopCacheQueue = this.gopCacheEnable ? new Set() : null;
@@ -756,21 +811,21 @@ class NodeRtmpSession extends EventEmitter {
   }
 
   sendACK(size) {
-    const rtmpBuffer = new Buffer('02000000000004030000000000000000', 'hex');
+    const rtmpBuffer = Buffer.from('02000000000004030000000000000000', 'hex');
     rtmpBuffer.writeUInt32BE(size, 12);
     // //console.log('windowACK: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
   sendWindowACK(size) {
-    const rtmpBuffer = new Buffer('02000000000004050000000000000000', 'hex');
+    const rtmpBuffer = Buffer.from('02000000000004050000000000000000', 'hex');
     rtmpBuffer.writeUInt32BE(size, 12);
     // //console.log('windowACK: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
   setPeerBandwidth(size, type) {
-    const rtmpBuffer = new Buffer('0200000000000506000000000000000000', 'hex');
+    const rtmpBuffer = Buffer.from('0200000000000506000000000000000000', 'hex');
     rtmpBuffer.writeUInt32BE(size, 12);
     rtmpBuffer[16] = type;
     // //console.log('setPeerBandwidth: '+rtmpBuffer.hex());
@@ -778,14 +833,14 @@ class NodeRtmpSession extends EventEmitter {
   }
 
   setChunkSize(size) {
-    const rtmpBuffer = new Buffer('02000000000004010000000000000000', 'hex');
+    const rtmpBuffer = Buffer.from('02000000000004010000000000000000', 'hex');
     rtmpBuffer.writeUInt32BE(size, 12);
     // //console.log('setChunkSize: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
   sendStreamStatus(st, id) {
-    const rtmpBuffer = new Buffer(
+    const rtmpBuffer = Buffer.from(
       '020000000000060400000000000000000000',
       'hex',
     );
@@ -808,7 +863,7 @@ class NodeRtmpSession extends EventEmitter {
       bool2: false,
     };
 
-    const rtmpBody = AMF.encodeAmf0Data(opt);
+    const rtmpBody = encodeAmf0Data(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
     this.socket.write(rtmpMessage);
   }
@@ -830,7 +885,7 @@ class NodeRtmpSession extends EventEmitter {
         description: description,
       },
     };
-    const rtmpBody = AMF.encodeAmf0Cmd(opt);
+    const rtmpBody = encodeAmf0Cmd(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
     this.socket.write(rtmpMessage);
   }
@@ -843,7 +898,7 @@ class NodeRtmpSession extends EventEmitter {
       messageTypeID: 0x4,
       messageStreamID: 0,
     };
-    const rtmpBody = new Buffer([
+    const rtmpBody = Buffer.from([
       0,
       6,
       (currentTimestamp >> 24) & 0xff,
@@ -877,7 +932,7 @@ class NodeRtmpSession extends EventEmitter {
         objectEncoding: this.objectEncoding,
       },
     };
-    const rtmpBody = AMF.encodeAmf0Cmd(opt);
+    const rtmpBody = encodeAmf0Cmd(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
     this.socket.write(rtmpMessage);
   }
@@ -896,7 +951,7 @@ class NodeRtmpSession extends EventEmitter {
       cmdObj: null,
       info: this.streams,
     };
-    const rtmpBody = AMF.encodeAmf0Cmd(opt);
+    const rtmpBody = encodeAmf0Cmd(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
     this.socket.write(rtmpMessage);
   }
@@ -1116,7 +1171,7 @@ class NodeRtmpSession extends EventEmitter {
     }
   }
 
-  onCloseStream(streamID, del) {
+  onCloseStream(streamID, del = undefined) {
     if (this.isIdling && this.playStreamId === streamID) {
       this.sendStatusMessage(
         this.playStreamId,
@@ -1200,5 +1255,3 @@ class NodeRtmpSession extends EventEmitter {
     this.onCloseStream(streamID, true);
   }
 }
-
-module.exports = NodeRtmpSession;

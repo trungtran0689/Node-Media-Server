@@ -1,26 +1,39 @@
-//
 //  Created by Mingliang Chen on 17/8/1.
 //  illuspas[a]gmail.com
 //  Copyright (c) 2017 Nodemedia. All rights reserved.
-//
 
-const Http = require('http');
-const WebSocket = require('ws');
-const Express = require('express');
-const NodeCoreUtils = require('./node_core_utils');
-const NodeFlvSession = require('./node_flv_session');
+import * as http from 'http';
+import * as ws from 'ws';
+import * as express from 'express';
+import { Express } from 'express';
+
+import { generateNewSessionID } from './node_core_utils';
+import { NodeFlvSession } from './node_flv_session';
+import { INodeMediaServerConfig } from './node_media_server';
 
 const HTTP_PORT = 80;
 
-class NodeHttpServer {
+export class NodeHttpServer {
+  config: INodeMediaServerConfig;
+
+  port: number;
+  sessions: Map<string, any>;
+  publishers: Map<string, string>;
+  idlePlayers: Set<string>;
+
+  expressApp: Express;
+  httpServer: http.Server;
+  wsServer: ws.Server;
+
   constructor(config, sessions, publishers, idlePlayers) {
-    this.port = config.http.port ? config.http.port : HTTP_PORT;
     this.config = config;
+
+    this.port = config.http.port ? config.http.port : HTTP_PORT;
     this.sessions = sessions;
     this.publishers = publishers;
     this.idlePlayers = idlePlayers;
 
-    this.expressApp = Express();
+    this.expressApp = express();
 
     this.expressApp.options('*.flv', (req, res, next) => {
       res.setHeader(
@@ -34,12 +47,12 @@ class NodeHttpServer {
     });
 
     this.expressApp.get('*.flv', (req, res, next) => {
-      req.nmsConnectionType = 'http';
+      req['nmsConnectionType'] = 'http';
 
       this.onConnect(req, res);
     });
 
-    this.httpServer = Http.createServer(this.expressApp);
+    this.httpServer = http.createServer(this.expressApp);
   }
 
   run() {
@@ -51,10 +64,10 @@ class NodeHttpServer {
       console.error(`Node Media Http Server ${e}`);
     });
 
-    this.wsServer = new WebSocket.Server({ server: this.httpServer });
+    this.wsServer = new ws.Server({ server: this.httpServer });
 
     this.wsServer.on('connection', (ws, req) => {
-      req.nmsConnectionType = 'ws';
+      req['nmsConnectionType'] = 'ws';
 
       this.onConnect(req, ws);
     });
@@ -69,7 +82,7 @@ class NodeHttpServer {
   }
 
   onConnect(req, res) {
-    const id = NodeCoreUtils.generateNewSessionID(this.sessions);
+    const id = generateNewSessionID();
     const session = new NodeFlvSession(this.config, req, res);
     this.sessions.set(id, session);
     session.id = id;
@@ -79,5 +92,3 @@ class NodeHttpServer {
     session.run();
   }
 }
-
-module.exports = NodeHttpServer;

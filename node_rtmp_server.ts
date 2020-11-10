@@ -1,20 +1,23 @@
-//
 //  Created by Mingliang Chen on 17/8/1.
 //  illuspas[a]gmail.com
 //  Copyright (c) 2017 Nodemedia. All rights reserved.
-//
 
-const Net = require('net');
-const NodeRtmpSession = require('./node_rtmp_session');
-const NodeCoreUtils = require('./node_core_utils');
+import * as net from 'net';
+
+import { generateNewSessionID } from './node_core_utils';
+import { NodeRtmpSession } from './node_rtmp_session';
+
 const RTMP_PORT = 1935;
 
-class NodeRtmpServer {
+export class NodeRtmpServer {
+  port: number;
+  tcpServer: net.Server;
+
   constructor(config, sessions, publishers, idlePlayers) {
     this.port = config.rtmp.port ? config.rtmp.port : RTMP_PORT;
 
-    this.tcpServer = Net.createServer(socket => {
-      const id = NodeCoreUtils.generateNewSessionID(sessions);
+    this.tcpServer = net.createServer(socket => {
+      const id = generateNewSessionID();
       const session = new NodeRtmpSession(config, socket);
       sessions.set(id, session);
       session.id = id;
@@ -35,5 +38,3 @@ class NodeRtmpServer {
     });
   }
 }
-
-module.exports = NodeRtmpServer;

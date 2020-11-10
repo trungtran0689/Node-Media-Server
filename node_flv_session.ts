@@ -1,19 +1,41 @@
-//
 //  Created by Mingliang Chen on 17/8/4.
 //  illuspas[a]gmail.com
 //  Copyright (c) 2017 Nodemedia. All rights reserved.
-//
 
-const EventEmitter = require('events');
-const URL = require('url');
+import { EventEmitter } from 'events';
+import { IncomingMessage, ServerResponse } from 'http';
+import { ParsedUrlQuery } from 'querystring';
+import * as url from 'url';
 
-const BufferPool = require('./node_core_bufferpool');
-const NodeCoreUtils = require('./node_core_utils');
+import { BufferPool } from './node_core_bufferpool';
+import { nodeEvent } from './node_core_utils';
+import { INodeMediaServerConfig } from './node_media_server';
 
-class NodeFlvSession extends EventEmitter {
+export class NodeFlvSession extends EventEmitter {
+  config: INodeMediaServerConfig;
+
+  req: IncomingMessage;
+  res: ServerResponse;
+  bp: BufferPool;
+  allow_origin: string;
+  isPublisher: boolean;
+  playStreamPath: string;
+  playArgs: ParsedUrlQuery;
+  nodeEvent: EventEmitter;
+  TAG: string;
+  connectCmdObj: any;
+  isStarting: boolean;
+  connectTime: Date;
+  sessions: Map<string, any>;
+  publishers: Map<string, string>;
+  idlePlayers: Set<string>;
+  id: string;
+
   constructor(config, req, res) {
     super();
+
     this.config = config;
+
     this.req = req;
     this.res = res;
     this.bp = new BufferPool();
@@ -22,7 +44,7 @@ class NodeFlvSession extends EventEmitter {
     this.isPublisher = false;
     this.playStreamPath = '';
     this.playArgs = null;
-    this.nodeEvent = NodeCoreUtils.nodeEvent;
+    this.nodeEvent = nodeEvent;
 
     this.on('connect', this.onConnect);
     this.on('play', this.onPlay);
@@ -32,8 +54,8 @@ class NodeFlvSession extends EventEmitter {
       this.res.on('message', this.onReqData.bind(this));
       this.res.on('close', this.onReqClose.bind(this));
       this.res.on('error', this.onReqError.bind(this));
-      this.res.write = this.res.send;
-      this.res.end = this.res.close;
+      this.res.write = this.res['send'];
+      this.res.end = this.res['close'];
       this.TAG = 'websocket-flv';
     } else {
       this.req.on('data', this.onReqData.bind(this));
@@ -45,7 +67,7 @@ class NodeFlvSession extends EventEmitter {
 
   run() {
     const method = this.req.method;
-    const urlInfo = URL.parse(this.req.url, true);
+    const urlInfo = url.parse(this.req.url, true);
     const streamPath = urlInfo.pathname.split('.')[0];
     const format = urlInfo.pathname.split('.')[1];
     this.connectCmdObj = { method, streamPath, query: urlInfo.query };
@@ -180,7 +202,7 @@ class NodeFlvSession extends EventEmitter {
     }
 
     //send FLV header
-    const FLVHeader = new Buffer([
+    const FLVHeader = Buffer.from([
       0x46,
       0x4c,
       0x56,
@@ -277,5 +299,3 @@ class NodeFlvSession extends EventEmitter {
     return Buffer.concat([FLVTagHeader, rtmpBody, PreviousTagSizeN]);
   }
 }
-
-module.exports = NodeFlvSession;
