@@ -6,7 +6,9 @@
   "scripts": {
     "lint": "eslint . && prettier --list-different \"**/*.{ts,js,json,html,css,scss,md}\"",
     "lint:fix": "eslint . --fix && prettier --write \"**/*.{ts,js,json,html,css,scss,md}\"",
-    "start": "ts-node index.ts"
+    "start": "ts-node index.ts",
+    "build": "tsc",
+    "release": "yarn build && yarn publish"
   },
   "dependencies": {
     "bitop": "^0.0.1",

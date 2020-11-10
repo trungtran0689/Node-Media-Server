@@ -1,4 +1,4 @@
-import { NodeMediaServer } from './node_media_server';
+import { NodeMediaServer } from './src/node_media_server';
 
 const config = {
   rtmp: {

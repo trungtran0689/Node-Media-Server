@@ -5,6 +5,9 @@
     "resolveJsonModule": true,
     "noImplicitThis": true,
     "noUnusedLocals": false,
-    "sourceMap": true
-  }
+    "sourceMap": true,
+    "outDir": "./dist",
+    "declaration": true
+  },
+  "include": ["./src/**/*"]
 }
