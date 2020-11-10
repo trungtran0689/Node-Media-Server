@@ -204,7 +204,7 @@ export class NodeRtmpSession extends EventEmitter {
 
         socket.destroy();
       } catch (e) {
-        console.error(e);
+        console.log(e);
       }
     });
   }
@@ -334,7 +334,7 @@ export class NodeRtmpSession extends EventEmitter {
           message.receivedLength = previousChunk.receivedLength;
           message.chunks = previousChunk.chunks;
         } else {
-          console.error(
+          console.log(
             `Chunk reference error for type ${
               message.formatType
             }: previous chunk for id ${message.chunkStreamID} is not found`,
@@ -363,7 +363,7 @@ export class NodeRtmpSession extends EventEmitter {
           message.receivedLength = previousChunk.receivedLength;
           message.chunks = previousChunk.chunks;
         } else {
-          console.error(
+          console.log(
             `Chunk reference error for type ${
               message.formatType
             }: previous chunk for id ${message.chunkStreamID} is not found`,
@@ -381,7 +381,7 @@ export class NodeRtmpSession extends EventEmitter {
           message.receivedLength = previousChunk.receivedLength;
           message.chunks = previousChunk.chunks;
         } else {
-          console.error(
+          console.log(
             `Chunk reference error for type ${
               message.formatType
             }: previous chunk for id ${message.chunkStreamID} is not found`,
@@ -389,7 +389,7 @@ export class NodeRtmpSession extends EventEmitter {
           break;
         }
       } else {
-        console.error('Unknown format type: ' + message.formatType);
+        console.log('Unknown format type: ' + message.formatType);
         break;
       }
 
@@ -682,7 +682,7 @@ export class NodeRtmpSession extends EventEmitter {
         // this.respondFCUnpublish();
         break;
       default:
-        console.warn(
+        console.log(
           '[rtmp handleCommandMessage] unknown AMF command: ' +
             commandMessage.cmd,
         );
@@ -1008,7 +1008,7 @@ export class NodeRtmpSession extends EventEmitter {
     }
 
     if (this.publishers.has(this.publishStreamPath)) {
-      console.warn(
+      console.log(
         '[rtmp publish] Already has a stream path ' + this.publishStreamPath,
       );
       this.sendStatusMessage(
@@ -1018,7 +1018,7 @@ export class NodeRtmpSession extends EventEmitter {
         'Stream already publishing',
       );
     } else if (this.isPublishing) {
-      console.warn('[rtmp publish] NetConnection is publishing ');
+      console.log('[rtmp publish] NetConnection is publishing ');
       this.sendStatusMessage(
         this.publishStreamId,
         'error',
@@ -1065,7 +1065,7 @@ export class NodeRtmpSession extends EventEmitter {
     }
 
     if (this.isPlaying) {
-      console.warn('[rtmp play] NetConnection is playing');
+      console.log('[rtmp play] NetConnection is playing');
       this.sendStatusMessage(
         this.playStreamId,
         'error',

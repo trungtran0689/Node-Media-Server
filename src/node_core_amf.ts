@@ -881,7 +881,7 @@ export function amf0encTypedObj() {
  */
 export function amfXDecodeOne(rules, buffer) {
   if (!rules[buffer.readUInt8(0)]) {
-    console.error('Unknown field', buffer.readUInt8(0));
+    console.log('Unknown field', buffer.readUInt8(0));
     return null;
   }
   return rules[buffer.readUInt8(0)](buffer);

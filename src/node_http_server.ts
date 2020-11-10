@@ -61,7 +61,7 @@ export class NodeHttpServer {
     });
 
     this.httpServer.on('error', e => {
-      console.error(`Node Media Http Server ${e}`);
+      console.log(`Node Media Http Server ${e}`);
     });
 
     this.wsServer = new ws.Server({ server: this.httpServer });
@@ -77,7 +77,7 @@ export class NodeHttpServer {
     });
 
     this.wsServer.on('error', e => {
-      console.error(`Node Media WebSocket Server ${e}`);
+      console.log(`Node Media WebSocket Server ${e}`);
     });
   }
 

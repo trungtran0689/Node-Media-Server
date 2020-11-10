@@ -34,7 +34,7 @@ export class NodeRtmpServer {
     });
 
     this.tcpServer.on('error', e => {
-      console.error(`Node Media Rtmp Server ${e}`);
+      console.log(`Node Media Rtmp Server ${e}`);
     });
   }
 }
