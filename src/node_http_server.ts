@@ -60,7 +60,7 @@ export class NodeHttpServer {
       console.log(`Node Media Http Server started on port: ${this.port}`);
     });
 
-    this.httpServer.on('error', e => {
+    this.httpServer.on('error', (e) => {
       console.log(`Node Media Http Server ${e}`);
     });
 
@@ -76,7 +76,7 @@ export class NodeHttpServer {
       console.log(`Node Media WebSocket Server started on port: ${this.port}`);
     });
 
-    this.wsServer.on('error', e => {
+    this.wsServer.on('error', (e) => {
       console.log(`Node Media WebSocket Server ${e}`);
     });
   }

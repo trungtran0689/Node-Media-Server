@@ -2,14 +2,14 @@
 //  illuspas[a]gmail.com
 //  Copyright (c) 2017 Nodemedia. All rights reserved.
 
-import { EventEmitter } from 'events';
-import { IncomingMessage, ServerResponse } from 'http';
-import { ParsedUrlQuery } from 'querystring';
 import * as url from 'url';
+import { IncomingMessage, ServerResponse } from 'http';
+import { EventEmitter } from 'events';
+import { ParsedUrlQuery } from 'querystring';
 
 import { BufferPool } from './node_core_bufferpool';
-import { nodeEvent } from './node_core_utils';
 import { INodeMediaServerConfig } from './node_media_server';
+import { nodeEvent } from './node_core_utils';
 
 export class NodeFlvSession extends EventEmitter {
   config: INodeMediaServerConfig;
@@ -39,7 +39,7 @@ export class NodeFlvSession extends EventEmitter {
     this.req = req;
     this.res = res;
     this.bp = new BufferPool();
-    this.bp.on('error', e => {});
+    this.bp.on('error', (e) => {});
     this.allow_origin = config.http.allow_origin || '*';
     this.isPublisher = false;
     this.playStreamPath = '';

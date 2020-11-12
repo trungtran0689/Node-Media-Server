@@ -335,9 +335,7 @@ export class NodeRtmpSession extends EventEmitter {
           message.chunks = previousChunk.chunks;
         } else {
           console.log(
-            `Chunk reference error for type ${
-              message.formatType
-            }: previous chunk for id ${message.chunkStreamID} is not found`,
+            `Chunk reference error for type ${message.formatType}: previous chunk for id ${message.chunkStreamID} is not found`,
           );
           break;
         }
@@ -364,9 +362,7 @@ export class NodeRtmpSession extends EventEmitter {
           message.chunks = previousChunk.chunks;
         } else {
           console.log(
-            `Chunk reference error for type ${
-              message.formatType
-            }: previous chunk for id ${message.chunkStreamID} is not found`,
+            `Chunk reference error for type ${message.formatType}: previous chunk for id ${message.chunkStreamID} is not found`,
           );
           break;
         }
@@ -382,9 +378,7 @@ export class NodeRtmpSession extends EventEmitter {
           message.chunks = previousChunk.chunks;
         } else {
           console.log(
-            `Chunk reference error for type ${
-              message.formatType
-            }: previous chunk for id ${message.chunkStreamID} is not found`,
+            `Chunk reference error for type ${message.formatType}: previous chunk for id ${message.chunkStreamID} is not found`,
           );
           break;
         }
@@ -703,9 +697,7 @@ export class NodeRtmpSession extends EventEmitter {
       this.audioCodec = sound_format;
       this.audioCodecName = AUDIO_CODEC_NAME[sound_format];
       console.log(
-        `[rtmp handleAudioMessage] Parse AudioTagHeader sound_format=${sound_format} sound_type=${sound_type} sound_size=${sound_size} sound_rate=${sound_rate} codec_name=${
-          this.audioCodecName
-        }`,
+        `[rtmp handleAudioMessage] Parse AudioTagHeader sound_format=${sound_format} sound_type=${sound_type} sound_size=${sound_size} sound_rate=${sound_rate} codec_name=${this.audioCodecName}`,
       );
 
       if (sound_format === 10) {
@@ -742,7 +734,7 @@ export class NodeRtmpSession extends EventEmitter {
         rtmpMessage.writeUInt32LE(session.playStreamId, 8);
         session.socket.write(rtmpMessage);
       } else if (session instanceof NodeFlvSession) {
-        session.res.write(flvMessage, null, e => {
+        session.res.write(flvMessage, null, (e) => {
           //websocket will throw a error if not set the cb when closed
         });
       }
@@ -761,9 +753,7 @@ export class NodeRtmpSession extends EventEmitter {
       this.videoCodec = codec_id;
       this.videoCodecName = VIDEO_CODEC_NAME[codec_id];
       console.log(
-        `[rtmp handleVideoMessage] Parse VideoTagHeader frame_type=${frame_type} codec_id=${codec_id} codec_name=${
-          this.videoCodecName
-        }`,
+        `[rtmp handleVideoMessage] Parse VideoTagHeader frame_type=${frame_type} codec_id=${codec_id} codec_name=${this.videoCodecName}`,
       );
 
       if (codec_id === 7 || codec_id === 12) {
@@ -803,7 +793,7 @@ export class NodeRtmpSession extends EventEmitter {
         rtmpMessage.writeUInt32LE(session.playStreamId, 8);
         session.socket.write(rtmpMessage);
       } else if (session instanceof NodeFlvSession) {
-        session.res.write(flvMessage, null, e => {
+        session.res.write(flvMessage, null, (e) => {
           //websocket will throw a error if not set the cb when closed
         });
       }

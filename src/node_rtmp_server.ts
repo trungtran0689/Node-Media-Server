@@ -16,7 +16,7 @@ export class NodeRtmpServer {
   constructor(config, sessions, publishers, idlePlayers) {
     this.port = config.rtmp.port ? config.rtmp.port : RTMP_PORT;
 
-    this.tcpServer = net.createServer(socket => {
+    this.tcpServer = net.createServer((socket) => {
       const id = generateNewSessionID();
       const session = new NodeRtmpSession(config, socket);
       sessions.set(id, session);
@@ -33,7 +33,7 @@ export class NodeRtmpServer {
       console.log(`Node Media Rtmp Server started on port: ${this.port}`);
     });
 
-    this.tcpServer.on('error', e => {
+    this.tcpServer.on('error', (e) => {
       console.log(`Node Media Rtmp Server ${e}`);
     });
   }

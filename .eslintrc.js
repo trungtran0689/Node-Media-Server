@@ -3,9 +3,14 @@ module.exports = {
     es6: true,
     node: true,
   },
-  extends: 'eslint:recommended',
+  parser: '@typescript-eslint/parser',
+  plugins: ['@typescript-eslint'],
+  extends: ['eslint:recommended'],
   parserOptions: {
     ecmaVersion: 2018,
+  },
+  globals: {
+    NodeJS: true,
   },
   rules: {
     indent: ['off', 2],
@@ -17,12 +22,10 @@ module.exports = {
     semi: ['error', 'always'],
     'eol-last': ['error', 'always'],
     'no-console': 0,
-    'no-unused-vars': 0,
     'no-var': 'error',
     eqeqeq: ['error', 'always'],
     curly: ['error', 'all'],
     'no-multiple-empty-lines': ['error', { max: 1 }],
-    'prefer-const': ['error'],
     'no-unused-vars': [
       'error',
       {
@@ -34,5 +37,13 @@ module.exports = {
     'prefer-arrow-callback': ['error'],
     'require-await': 'error',
     'no-case-declarations': 0,
+    'prefer-const': [
+      'error',
+      {
+        destructuring: 'all',
+        ignoreReadBeforeAssign: false,
+      },
+    ],
+    'no-prototype-builtins': 'off',
   },
 };

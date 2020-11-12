@@ -981,7 +981,7 @@ export function amf3EncodeOne(o) {
  */
 export function amf3Encode(a) {
   let buf = Buffer.alloc(0);
-  a.forEach(o => {
+  a.forEach((o) => {
     buf = Buffer.concat([buf, amf3EncodeOne(o)]);
   });
   return buf;
@@ -994,7 +994,7 @@ export function amf3Encode(a) {
  */
 export function amf0Encode(a) {
   let buf = Buffer.alloc(0);
-  a.forEach(o => {
+  a.forEach((o) => {
     buf = Buffer.concat([buf, amf0EncodeOne(o)]);
   });
   return buf;
@@ -1045,7 +1045,7 @@ export function decodeAmf0Data(dbuf) {
   buffer = buffer.slice(cmd.len);
 
   if (rtmpDataDecode[cmd.value]) {
-    rtmpDataDecode[cmd.value].forEach(n => {
+    rtmpDataDecode[cmd.value].forEach((n) => {
       if (buffer.length > 0) {
         const r = amf0DecodeOne(buffer);
         buffer = buffer.slice(r.len);
@@ -1072,7 +1072,7 @@ export function decodeAmf0Cmd(dbuf) {
   buffer = buffer.slice(cmd.len);
 
   if (rtmpCmdDecode[cmd.value]) {
-    rtmpCmdDecode[cmd.value].forEach(n => {
+    rtmpCmdDecode[cmd.value].forEach((n) => {
       if (buffer.length > 0) {
         const r = amf0DecodeOne(buffer);
         buffer = buffer.slice(r.len);
@@ -1094,7 +1094,7 @@ export function encodeAmf0Cmd(opt) {
   let data = amf0EncodeOne(opt.cmd);
 
   if (rtmpCmdDecode[opt.cmd]) {
-    rtmpCmdDecode[opt.cmd].forEach(n => {
+    rtmpCmdDecode[opt.cmd].forEach((n) => {
       if (opt.hasOwnProperty(n)) {
         data = Buffer.concat([data, amf0EncodeOne(opt[n])]);
       }
@@ -1110,7 +1110,7 @@ export function encodeAmf0Data(opt) {
   let data = amf0EncodeOne(opt.cmd);
 
   if (rtmpDataDecode[opt.cmd]) {
-    rtmpDataDecode[opt.cmd].forEach(n => {
+    rtmpDataDecode[opt.cmd].forEach((n) => {
       if (opt.hasOwnProperty(n)) {
         data = Buffer.concat([data, amf0EncodeOne(opt[n])]);
       }
@@ -1136,7 +1136,7 @@ export function decodeAmf3Cmd(dbuf) {
   buffer = buffer.slice(cmd.len);
 
   if (rtmpCmdDecode[cmd.value]) {
-    rtmpCmdDecode[cmd.value].forEach(n => {
+    rtmpCmdDecode[cmd.value].forEach((n) => {
       if (buffer.length > 0) {
         const r = amf3DecodeOne(buffer);
         buffer = buffer.slice(r.len);
@@ -1158,7 +1158,7 @@ export function encodeAmf3Cmd(opt) {
   let data = amf0EncodeOne(opt.cmd);
 
   if (rtmpCmdDecode[opt.cmd]) {
-    rtmpCmdDecode[opt.cmd].forEach(n => {
+    rtmpCmdDecode[opt.cmd].forEach((n) => {
       if (opt.hasOwnProperty(n)) {
         data = Buffer.concat([data, amf3EncodeOne(opt[n])]);
       }

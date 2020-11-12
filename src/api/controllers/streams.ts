@@ -107,7 +107,7 @@ export function getStream(req, res, next) {
 
   const isLive = !!publisherSession;
 
-  const viewers = _.filter(Array.from(nms.sessions.values()), session => {
+  const viewers = _.filter(Array.from(nms.sessions.values()), (session) => {
     return (session as any).playStreamPath === publishStreamPath;
   }).length;
 
