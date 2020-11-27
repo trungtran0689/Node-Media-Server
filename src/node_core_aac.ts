@@ -22,14 +22,17 @@ const AAC_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 8];
 
 function getObjectType(bitop) {
   let audioObjectType = bitop.read(5);
+
   if (audioObjectType === 31) {
     audioObjectType = bitop.read(6) + 32;
   }
+
   return audioObjectType;
 }
 
 function getSampleRate(bitop, info) {
   info.sampling_index = bitop.read(4);
+
   return info.sampling_index === 0x0f
     ? bitop.read(24)
     : AAC_SAMPLE_RATE[info.sampling_index];
@@ -38,6 +41,7 @@ function getSampleRate(bitop, info) {
 export function readAudioSpecificConfig(aacSequenceHeader) {
   const info: any = {};
   const bitop = new Bitop(aacSequenceHeader);
+
   bitop.read(16);
   info.object_type = getObjectType(bitop);
   info.sample_rate = getSampleRate(bitop, info);
@@ -71,6 +75,7 @@ export function getProfileName(info) {
       if (info.sbr > 0) {
         return 'HE';
       }
+
       return 'LC';
     case 3:
       return 'SSR';

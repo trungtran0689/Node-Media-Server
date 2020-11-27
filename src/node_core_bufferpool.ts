@@ -35,18 +35,23 @@ export class BufferPool extends Readable {
     }
   }
 
-  _read(size) {}
+  _read(size) {
+    // empty
+  }
 
   read(size) {
     this.poolBytes -= size;
+
     return super.read(size);
   }
 
   need(size) {
     const ret = this.poolBytes < size;
+
     if (ret) {
       this.needBytes = size;
     }
+
     return ret;
   }
 }

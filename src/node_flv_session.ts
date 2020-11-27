@@ -39,7 +39,9 @@ export class NodeFlvSession extends EventEmitter {
     this.req = req;
     this.res = res;
     this.bp = new BufferPool();
-    this.bp.on('error', (e) => {});
+    this.bp.on('error', (e) => {
+      // empty
+    });
     this.allow_origin = config.http.allow_origin || '*';
     this.isPublisher = false;
     this.playStreamPath = '';
@@ -70,6 +72,7 @@ export class NodeFlvSession extends EventEmitter {
     const urlInfo = url.parse(this.req.url, true);
     const streamPath = urlInfo.pathname.split('.')[0];
     const format = urlInfo.pathname.split('.')[1];
+
     this.connectCmdObj = { method, streamPath, query: urlInfo.query };
     this.nodeEvent.emit('preConnect', this.id, this.connectCmdObj);
 
@@ -82,6 +85,7 @@ export class NodeFlvSession extends EventEmitter {
       console.log(`[${this.TAG}] Unsupported format=${format}`);
       this.res.statusCode = 403;
       this.res.end();
+
       return;
     }
 
@@ -94,6 +98,7 @@ export class NodeFlvSession extends EventEmitter {
         this.playArgs = urlInfo.query;
         console.log(`[${this.TAG} play] play stream ` + this.playStreamPath);
         this.emit('play');
+
         return;
       }
       case 'POST': {
@@ -101,12 +106,14 @@ export class NodeFlvSession extends EventEmitter {
         console.log(`[${this.TAG}] Unsupported method=` + method);
         this.res.statusCode = 405;
         this.res.end();
+
         return;
       }
       default: {
         console.log(`[${this.TAG}] Unsupported method=` + method);
         this.res.statusCode = 405;
         this.res.end();
+
         return;
       }
     }
@@ -176,7 +183,9 @@ export class NodeFlvSession extends EventEmitter {
     this.res.end();
   }
 
-  onConnect() {}
+  onConnect() {
+    // empty
+  }
 
   onPlay() {
     this.nodeEvent.emit('prePlay', this.id, this.playStreamPath, this.playArgs);
@@ -188,12 +197,14 @@ export class NodeFlvSession extends EventEmitter {
     if (!this.publishers.has(this.playStreamPath)) {
       console.log(`[${this.TAG} play] stream not found ` + this.playStreamPath);
       this.idlePlayers.add(this.id);
+
       return;
     }
 
     const publisherId = this.publishers.get(this.playStreamPath);
     const publisher = this.sessions.get(publisherId);
     const players = publisher.players;
+
     players.add(this.id);
 
     if (this.res.setHeader) {
@@ -217,6 +228,7 @@ export class NodeFlvSession extends EventEmitter {
       0x00,
       0x00,
     ]);
+
     if (publisher.isFirstAudioReceived) {
       FLVHeader[4] |= 0b00000100;
     }
@@ -238,6 +250,7 @@ export class NodeFlvSession extends EventEmitter {
         rtmpHeader,
         publisher.metaData,
       );
+
       this.res.write(metaDataFlvMessage);
     }
     //send aacSequenceHeader
@@ -252,6 +265,7 @@ export class NodeFlvSession extends EventEmitter {
         rtmpHeader,
         publisher.aacSequenceHeader,
       );
+
       this.res.write(flvMessage);
     }
     //send avcSequenceHeader
@@ -266,6 +280,7 @@ export class NodeFlvSession extends EventEmitter {
         rtmpHeader,
         publisher.avcSequenceHeader,
       );
+
       this.res.write(flvMessage);
     }
     //send gop cache
@@ -283,10 +298,13 @@ export class NodeFlvSession extends EventEmitter {
     );
   }
 
-  onPublish() {}
+  onPublish() {
+    // empty
+  }
 
   static createFlvMessage(rtmpHeader, rtmpBody) {
     const FLVTagHeader = Buffer.alloc(11);
+
     FLVTagHeader[0] = rtmpHeader.messageTypeID;
     FLVTagHeader.writeUIntBE(rtmpBody.length, 1, 3);
     FLVTagHeader[4] = (rtmpHeader.timestamp >> 16) & 0xff;
@@ -295,7 +313,9 @@ export class NodeFlvSession extends EventEmitter {
     FLVTagHeader[7] = (rtmpHeader.timestamp >> 24) & 0xff;
     FLVTagHeader.writeUIntBE(0, 8, 3);
     const PreviousTagSizeN = Buffer.alloc(4);
+
     PreviousTagSizeN.writeUInt32BE(11 + rtmpBody.length);
+
     return Buffer.concat([FLVTagHeader, rtmpBody, PreviousTagSizeN]);
   }
 }

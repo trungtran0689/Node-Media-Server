@@ -84,6 +84,7 @@ export class NodeHttpServer {
   onConnect(req, res) {
     const id = generateNewSessionID();
     const session = new NodeFlvSession(this.config, req, res);
+
     this.sessions.set(id, session);
     session.id = id;
     session.sessions = this.sessions;

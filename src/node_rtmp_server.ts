@@ -19,6 +19,7 @@ export class NodeRtmpServer {
     this.tcpServer = net.createServer((socket) => {
       const id = generateNewSessionID();
       const session = new NodeRtmpSession(config, socket);
+
       sessions.set(id, session);
       session.id = id;
       session.sessions = sessions;

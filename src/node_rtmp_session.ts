@@ -246,6 +246,7 @@ export class NodeRtmpSession extends EventEmitter {
     }
     const c0c1 = this.bp.read(1537);
     const s0s1s2 = generateS0S1S2(c0c1);
+
     this.socket.write(s0s1s2);
 
     if (this.bp.need(1536)) {
@@ -254,6 +255,7 @@ export class NodeRtmpSession extends EventEmitter {
       }
     }
     const _c2 = this.bp.read(1536);
+
     console.log('[rtmp handshake] done');
     console.log('[rtmp message parser]  start');
     this.bp.readBytes = 0;
@@ -268,6 +270,7 @@ export class NodeRtmpSession extends EventEmitter {
         }
       }
       const chunkBasicHeader = this.bp.read(1);
+
       message.formatType = chunkBasicHeader[0] >> 6;
       message.chunkStreamID = chunkBasicHeader[0] & 0x3f;
       if (message.chunkStreamID === 0) {
@@ -278,6 +281,7 @@ export class NodeRtmpSession extends EventEmitter {
           }
         }
         const exCSID = this.bp.read(1);
+
         message.chunkStreamID = exCSID[0] + 64;
       } else if (message.chunkStreamID === 1) {
         // Chunk basic header 3 64-65599
@@ -287,6 +291,7 @@ export class NodeRtmpSession extends EventEmitter {
           }
         }
         const exCSID = this.bp.read(2);
+
         message.chunkStreamID = (exCSID[1] << 8) + exCSID[0] + 64;
       } else {
         // Chunk basic header 1  2-63
@@ -394,15 +399,18 @@ export class NodeRtmpSession extends EventEmitter {
           }
         }
         const extTimestamp = this.bp.read(4);
+
         message.timestamp = extTimestamp.readUInt32BE();
       } else if (
         message.extendedTimestampType === EXTENDED_TIMESTAMP_TYPE_DELTA
       ) {
         const extTimestamp = this.bp.read(4);
+
         message.timestampDelta = extTimestamp.readUInt32BE();
       }
 
       let chunkBodySize = message.messageLength;
+
       chunkBodySize -= message.receivedLength;
       chunkBodySize = Math.min(chunkBodySize, this.inChunkSize);
 
@@ -412,6 +420,7 @@ export class NodeRtmpSession extends EventEmitter {
         }
       }
       const chunkBody = this.bp.read(chunkBodySize);
+
       message.receivedLength += chunkBodySize;
       message.chunks.push(chunkBody);
       if (message.receivedLength === message.messageLength) {
@@ -422,6 +431,7 @@ export class NodeRtmpSession extends EventEmitter {
           }
         }
         let rtmpBody = Buffer.concat(message.chunks);
+
         this.handleRTMPMessage(message, rtmpBody);
         message.receivedLength = 0;
         message.chunks = [];
@@ -465,6 +475,7 @@ export class NodeRtmpSession extends EventEmitter {
 
   createChunkBasicHeader(fmt, id) {
     let out;
+
     if (id >= 64 + 255) {
       out = Buffer.alloc(3);
       out[0] = (fmt << 6) | 1;
@@ -478,6 +489,7 @@ export class NodeRtmpSession extends EventEmitter {
       out = Buffer.alloc(1);
       out[0] = (fmt << 6) | id;
     }
+
     return out;
   }
 
@@ -555,6 +567,7 @@ export class NodeRtmpSession extends EventEmitter {
         break;
       case 4:
         const userControlMessage: any = {};
+
         userControlMessage.eventType = rtmpBody.readUInt16BE();
         userControlMessage.eventData = rtmpBody.slice(2);
         this.handleUserControlMessage(userControlMessage);
@@ -574,21 +587,25 @@ export class NodeRtmpSession extends EventEmitter {
       case 15:
         //AMF3 DataMessage
         const amf3Data = decodeAmf0Data(rtmpBody.slice(1));
+
         this.handleAMFDataMessage(rtmpHeader.messageStreamID, amf3Data);
         break;
       case 17:
         //AMF3 CommandMessage
         const amf3Cmd = decodeAmf0Cmd(rtmpBody.slice(1));
+
         this.handleAMFCommandMessage(rtmpHeader.messageStreamID, amf3Cmd);
         break;
       case 18:
         //AMF0 DataMessage
         const amf0Data = decodeAmf0Data(rtmpBody);
+
         this.handleAMFDataMessage(rtmpHeader.messageStreamID, amf0Data);
         break;
       case 20:
         //AMF0 CommandMessage
         const amf0Cmd = decodeAmf0Cmd(rtmpBody);
+
         this.handleAMFCommandMessage(rtmpHeader.messageStreamID, amf0Cmd);
         break;
     }
@@ -599,6 +616,7 @@ export class NodeRtmpSession extends EventEmitter {
       case 3:
         const streamID = userControlMessage.eventData.readUInt32BE();
         const bufferLength = userControlMessage.eventData.readUInt32BE(4);
+
         console.log(
           `[rtmp handleUserControlMessage] SetBufferLength: streamID=${streamID} bufferLength=${bufferLength}`,
         );
@@ -606,6 +624,7 @@ export class NodeRtmpSession extends EventEmitter {
       case 7:
         const _timestamp = userControlMessage.eventData.readUInt32BE();
         // console.log(`[rtmp handleUserControlMessage] PingResponse: timestamp=${timestamp}`);
+
         break;
     }
   }
@@ -619,6 +638,7 @@ export class NodeRtmpSession extends EventEmitter {
             cmd: 'onMetaData',
             cmdObj: dataMessage.dataObj,
           };
+
           this.metaData = encodeAmf0Data(opt);
           this.audioSamplerate = dataMessage.dataObj.audiosamplerate;
           this.audioChannels = dataMessage.dataObj.stereo ? 2 : 1;
@@ -693,6 +713,7 @@ export class NodeRtmpSession extends EventEmitter {
       const sound_type = sound_format & 0x01;
       const sound_size = (sound_format >> 1) & 0x01;
       const sound_rate = (sound_format >> 2) & 0x03;
+
       sound_format = (sound_format >> 4) & 0x0f;
       this.audioCodec = sound_format;
       this.audioCodecName = AUDIO_CODEC_NAME[sound_format];
@@ -706,6 +727,7 @@ export class NodeRtmpSession extends EventEmitter {
           this.aacSequenceHeader = Buffer.from(rtmpBody);
           this.isFirstAudioReceived = true;
           const info = readAudioSpecificConfig(this.aacSequenceHeader);
+
           this.audioProfileName = getProfileName(info);
           this.audioSamplerate = info.sample_rate;
           this.audioChannels = info.channels;
@@ -719,6 +741,7 @@ export class NodeRtmpSession extends EventEmitter {
 
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
     const flvMessage = NodeFlvSession.createFlvMessage(rtmpHeader, rtmpBody);
+
     if (this.rtmpGopCacheQueue) {
       if (this.aacSequenceHeader && rtmpBody[1] === 0) {
         //skip aac sequence header
@@ -730,6 +753,7 @@ export class NodeRtmpSession extends EventEmitter {
 
     for (const playerId of this.players) {
       const session = this.sessions.get(playerId);
+
       if (session instanceof NodeRtmpSession) {
         rtmpMessage.writeUInt32LE(session.playStreamId, 8);
         session.socket.write(rtmpMessage);
@@ -747,6 +771,7 @@ export class NodeRtmpSession extends EventEmitter {
     }
     let frame_type = rtmpBody[0];
     const codec_id = frame_type & 0x0f;
+
     frame_type = (frame_type >> 4) & 0x0f;
 
     if (!this.isFirstVideoReceived) {
@@ -789,6 +814,7 @@ export class NodeRtmpSession extends EventEmitter {
 
     for (const playerId of this.players) {
       const session = this.sessions.get(playerId);
+
       if (session instanceof NodeRtmpSession) {
         rtmpMessage.writeUInt32LE(session.playStreamId, 8);
         session.socket.write(rtmpMessage);
@@ -802,6 +828,7 @@ export class NodeRtmpSession extends EventEmitter {
 
   sendACK(size) {
     const rtmpBuffer = Buffer.from('02000000000004030000000000000000', 'hex');
+
     rtmpBuffer.writeUInt32BE(size, 12);
     // //console.log('windowACK: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
@@ -809,6 +836,7 @@ export class NodeRtmpSession extends EventEmitter {
 
   sendWindowACK(size) {
     const rtmpBuffer = Buffer.from('02000000000004050000000000000000', 'hex');
+
     rtmpBuffer.writeUInt32BE(size, 12);
     // //console.log('windowACK: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
@@ -816,6 +844,7 @@ export class NodeRtmpSession extends EventEmitter {
 
   setPeerBandwidth(size, type) {
     const rtmpBuffer = Buffer.from('0200000000000506000000000000000000', 'hex');
+
     rtmpBuffer.writeUInt32BE(size, 12);
     rtmpBuffer[16] = type;
     // //console.log('setPeerBandwidth: '+rtmpBuffer.hex());
@@ -824,6 +853,7 @@ export class NodeRtmpSession extends EventEmitter {
 
   setChunkSize(size) {
     const rtmpBuffer = Buffer.from('02000000000004010000000000000000', 'hex');
+
     rtmpBuffer.writeUInt32BE(size, 12);
     // //console.log('setChunkSize: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
@@ -834,6 +864,7 @@ export class NodeRtmpSession extends EventEmitter {
       '020000000000060400000000000000000000',
       'hex',
     );
+
     rtmpBuffer.writeUInt16BE(st, 12);
     rtmpBuffer.writeUInt32BE(id, 14);
     this.socket.write(rtmpBuffer);
@@ -855,6 +886,7 @@ export class NodeRtmpSession extends EventEmitter {
 
     const rtmpBody = encodeAmf0Data(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
+
     this.socket.write(rtmpMessage);
   }
 
@@ -877,6 +909,7 @@ export class NodeRtmpSession extends EventEmitter {
     };
     const rtmpBody = encodeAmf0Cmd(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
+
     this.socket.write(rtmpMessage);
   }
 
@@ -897,6 +930,7 @@ export class NodeRtmpSession extends EventEmitter {
       currentTimestamp & 0xff,
     ]);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
+
     this.socket.write(rtmpMessage);
     // console.log('pingRequest',rtmpMessage.toString('hex'));
   }
@@ -924,6 +958,7 @@ export class NodeRtmpSession extends EventEmitter {
     };
     const rtmpBody = encodeAmf0Cmd(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
+
     this.socket.write(rtmpMessage);
   }
 
@@ -943,6 +978,7 @@ export class NodeRtmpSession extends EventEmitter {
     };
     const rtmpBody = encodeAmf0Cmd(opt);
     const rtmpMessage = this.createRtmpMessage(rtmpHeader, rtmpBody);
+
     this.socket.write(rtmpMessage);
   }
 
@@ -1033,6 +1069,7 @@ export class NodeRtmpSession extends EventEmitter {
       );
       for (const idlePlayerId of this.idlePlayers) {
         const idlePlayer = this.sessions.get(idlePlayerId);
+
         if (idlePlayer.playStreamPath === this.publishStreamPath) {
           idlePlayer.emit('play');
           this.idlePlayers.delete(idlePlayerId);
@@ -1102,6 +1139,7 @@ export class NodeRtmpSession extends EventEmitter {
           rtmpHeader,
           publisher.metaData,
         );
+
         this.socket.write(metaDataRtmpMessage);
       }
 
@@ -1117,6 +1155,7 @@ export class NodeRtmpSession extends EventEmitter {
           rtmpHeader,
           publisher.aacSequenceHeader,
         );
+
         this.socket.write(rtmpMessage);
       }
       //send avcSequenceHeader
@@ -1131,6 +1170,7 @@ export class NodeRtmpSession extends EventEmitter {
           rtmpHeader,
           publisher.avcSequenceHeader,
         );
+
         this.socket.write(rtmpMessage);
       }
       //send gop cache
@@ -1182,6 +1222,7 @@ export class NodeRtmpSession extends EventEmitter {
         'Stopped playing stream.',
       );
       const publisherPath = this.publishers.get(this.playStreamPath);
+
       if (publisherPath) {
         this.sessions.get(publisherPath).players.delete(this.id);
       }
@@ -1204,6 +1245,7 @@ export class NodeRtmpSession extends EventEmitter {
       );
       for (const playerId of this.players) {
         const player = this.sessions.get(playerId);
+
         if (player instanceof NodeRtmpSession) {
           player.sendStatusMessage(
             player.playStreamId,
@@ -1219,6 +1261,7 @@ export class NodeRtmpSession extends EventEmitter {
       //let the players to idlePlayers
       for (const playerId of this.players) {
         const player = this.sessions.get(playerId);
+
         this.idlePlayers.add(playerId);
         player.isPlaying = false;
         player.isIdling = true;

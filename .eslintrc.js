@@ -4,11 +4,15 @@ module.exports = {
     node: true,
   },
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint'],
-  extends: ['eslint:recommended'],
   parserOptions: {
     ecmaVersion: 2018,
   },
+  plugins: ['@typescript-eslint'],
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/eslint-recommended',
+    'plugin:@typescript-eslint/recommended',
+  ],
   globals: {
     NodeJS: true,
   },
@@ -45,5 +49,15 @@ module.exports = {
       },
     ],
     'no-prototype-builtins': 'off',
+    'newline-after-var': ['error', 'always'],
+    'padding-line-between-statements': [
+      'error',
+      { blankLine: 'always', prev: '*', next: 'return' },
+    ],
+    'no-return-await': 'error',
+    '@typescript-eslint/no-explicit-any': 'off',
+    // '@typescript-eslint/explicit-function-return-type': ['error'],
+    '@typescript-eslint/explicit-module-boundary-types': 'off',
+    '@typescript-eslint/no-unused-vars': 'off',
   },
 };
