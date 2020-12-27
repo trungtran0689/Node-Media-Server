@@ -5,8 +5,10 @@
   "main": "dist/node_media_server.js",
   "types": "dist/node_media_server.d.ts",
   "scripts": {
-    "lint": "eslint . --ext .ts && prettier --list-different \"**/*.{ts,js,json,html,css,scss,md}\"",
-    "lint:fix": "eslint . --ext .ts --fix && prettier --write \"**/*.{ts,js,json,html,css,scss,md}\"",
+    "prettier": "prettier \"**/*\" --list-different --ignore-unknown",
+    "prettier:fix": "prettier \"**/*\" --write --ignore-unknown",
+    "lint": "eslint . && yarn run prettier && yarn tsc --project tsconfig.eslint.json",
+    "lint:fix": "eslint . --fix && yarn run prettier:fix",
     "start": "ts-node index.ts",
     "build": "tsc",
     "postinstall": "yarn build"

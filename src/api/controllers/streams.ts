@@ -15,10 +15,10 @@ export function getStreams(req, res, next) {
         return;
       }
 
-      const [app, stream] = _.slice(regRes, 1);
+      const [app, channel] = _.slice(regRes, 1);
 
-      if (!_.get(stats, [app, stream])) {
-        _.set(stats, [app, stream], {
+      if (!_.get(stats, [app, channel])) {
+        _.set(stats, [app, channel], {
           publisher: null,
           subscribers: [],
         });
@@ -26,10 +26,10 @@ export function getStreams(req, res, next) {
 
       switch (true) {
         case session.isPublishing: {
-          _.set(stats, [app, stream, 'publisher'], {
-            app: app,
-            stream: stream,
-            clientId: session.id,
+          _.set(stats, [app, channel, 'publisher'], {
+            app,
+            channel,
+            connectId: session.id,
             connectCreated: session.connectTime,
             bytes: session.socket.bytesRead,
             ip: session.socket.remoteAddress,
@@ -58,10 +58,10 @@ export function getStreams(req, res, next) {
         case !!session.playStreamPath: {
           switch (session.constructor.name) {
             case 'NodeRtmpSession': {
-              stats[app][stream]['subscribers'].push({
-                app: app,
-                stream: stream,
-                clientId: session.id,
+              stats[app][channel]['subscribers'].push({
+                app,
+                channel,
+                connectId: session.id,
                 connectCreated: session.connectTime,
                 bytes: session.socket.bytesWritten,
                 ip: session.socket.remoteAddress,
@@ -72,10 +72,10 @@ export function getStreams(req, res, next) {
               break;
             }
             case 'NodeFlvSession': {
-              stats[app][stream]['subscribers'].push({
-                app: app,
-                stream: stream,
-                clientId: session.id,
+              stats[app][channel]['subscribers'].push({
+                app,
+                channel,
+                connectId: session.id,
                 connectCreated: session.connectTime,
                 bytes: session.req.connection.bytesWritten,
                 ip: session.req.connection.remoteAddress,
