@@ -10,6 +10,8 @@ import { Express } from 'express';
 import { generateNewSessionID } from './node_core_utils';
 import { NodeFlvSession } from './node_flv_session';
 import { INodeMediaServerConfig } from './node_media_server';
+import { authCheck } from './api/middleware/auth';
+import { getStreams } from './api/controllers/streams';
 
 const HTTP_PORT = 80;
 
@@ -36,10 +38,7 @@ export class NodeHttpServer {
     this.expressApp = express();
 
     this.expressApp.options('*.flv', (req, res, next) => {
-      res.setHeader(
-        'Access-Control-Allow-Origin',
-        this.config.http.allow_origin,
-      );
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'range');
 
@@ -50,6 +49,24 @@ export class NodeHttpServer {
       req['nmsConnectionType'] = 'http';
 
       this.onConnect(req, res);
+    });
+
+    this.expressApp.use((req, res, next) => {
+      req['nms'] = this;
+
+      next();
+    });
+
+    this.expressApp.use(authCheck);
+
+    this.expressApp.use('/api/streams', getStreams);
+
+    this.expressApp.use((req, res, next) => {
+      throw new Error('not_found');
+    });
+
+    this.expressApp.use((err, req, res, next) => {
+      res.status(500).send(err.message);
     });
 
     this.httpServer = http.createServer(this.expressApp);

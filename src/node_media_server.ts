@@ -8,9 +8,6 @@ import { nodeEvent } from './node_core_utils';
 import { NodeHttpServer } from './node_http_server';
 import { NodeRtmpServer } from './node_rtmp_server';
 
-import { getStreams } from './api/controllers/streams';
-import { authCheck } from './api/middleware/auth';
-
 export interface INodeMediaServerConfig {
   rtmp: {
     port: number;
@@ -21,7 +18,6 @@ export interface INodeMediaServerConfig {
   };
   http: {
     port: number | string;
-    allow_origin: string;
   };
   api: {
     token: string;
@@ -67,16 +63,6 @@ export class NodeMediaServer {
         this.publishers,
         this.idlePlayers,
       );
-
-      this.nhs.expressApp.use((req, res, next) => {
-        req['nms'] = this;
-
-        next();
-      });
-
-      this.nhs.expressApp.use(authCheck);
-
-      this.nhs.expressApp.use('/api/streams', getStreams);
 
       this.nhs.run();
     }

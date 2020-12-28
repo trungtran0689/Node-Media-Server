@@ -17,7 +17,6 @@ export class NodeFlvSession extends EventEmitter {
   req: IncomingMessage;
   res: ServerResponse;
   bp: BufferPool;
-  allow_origin: string;
   isPublisher: boolean;
   playStreamPath: string;
   playArgs: ParsedUrlQuery;
@@ -42,7 +41,6 @@ export class NodeFlvSession extends EventEmitter {
     this.bp.on('error', (e) => {
       // empty
     });
-    this.allow_origin = config.http.allow_origin || '*';
     this.isPublisher = false;
     this.playStreamPath = '';
     this.playArgs = null;
@@ -209,7 +207,7 @@ export class NodeFlvSession extends EventEmitter {
 
     if (this.res.setHeader) {
       this.res.setHeader('Content-Type', 'video/x-flv');
-      this.res.setHeader('Access-Control-Allow-Origin', this.allow_origin);
+      this.res.setHeader('Access-Control-Allow-Origin', '*');
     }
 
     //send FLV header

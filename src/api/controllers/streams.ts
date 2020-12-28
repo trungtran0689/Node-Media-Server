@@ -1,136 +1,105 @@
 import * as _ from 'lodash';
 
+import { NodeMediaServer } from '../../node_media_server';
+
 export function getStreams(req, res, next) {
-  const nms = req.nms;
+  const nms: NodeMediaServer = req.nms;
 
-  const stats: any = {};
+  const stats = [];
 
-  nms.sessions.forEach((session, id) => {
-    if (session.isStarting) {
-      const regRes = /\/(.*)\/(.*)/gi.exec(
-        session.publishStreamPath || session.playStreamPath,
-      );
+  for (const [, session] of nms.sessions) {
+    if (!session.isStarting) {
+      continue;
+    }
 
-      if (regRes === null) {
-        return;
-      }
+    const regRes = /\/(.*)\/(.*)/gi.exec(
+      session.publishStreamPath || session.playStreamPath,
+    );
 
-      const [app, channel] = _.slice(regRes, 1);
+    if (regRes === null) {
+      continue;
+    }
 
-      if (!_.get(stats, [app, channel])) {
-        _.set(stats, [app, channel], {
-          publisher: null,
-          subscribers: [],
+    const [app, channel] = _.slice(regRes, 1);
+
+    let liveApp = _.find(stats, { app });
+
+    if (!liveApp) {
+      liveApp = {
+        app,
+        channels: [],
+      };
+
+      stats.push(liveApp);
+    }
+
+    let liveChannel = _.find(liveApp.channels, { channel });
+
+    if (!liveChannel) {
+      liveChannel = {
+        channel,
+        publisher: null,
+        subscribers: [],
+      };
+
+      liveApp.channels.push(liveChannel);
+    }
+
+    if (session.isPublishing) {
+      liveChannel.publisher = {
+        app,
+        channel,
+        connectId: session.id,
+        connectCreated: session.connectTime,
+        bytes: session.socket.bytesRead,
+        ip: session.socket.remoteAddress,
+        audio: {
+          audioCodec: session.audioCodec,
+          codec: session.audioCodecName,
+          profile: session.audioProfileName,
+          samplerate: session.audioSamplerate,
+          channels: session.audioChannels,
+        },
+        video: {
+          videoCodec: session.videoCodec,
+          codec: session.videoCodecName,
+          size: session.videoSize,
+          fps: session.videoFps,
+        },
+        userId: session.userId || null,
+      };
+    }
+
+    if (session.playStreamPath) {
+      if (session.constructor.name === 'NodeRtmpSession') {
+        liveChannel.subscribers.push({
+          app,
+          channel,
+          connectId: session.id,
+          connectCreated: session.connectTime,
+          bytes: session.socket.bytesWritten,
+          ip: session.socket.remoteAddress,
+          protocol: 'rtmp',
+          userId: session.userId || null,
         });
       }
 
-      switch (true) {
-        case session.isPublishing: {
-          _.set(stats, [app, channel, 'publisher'], {
-            app,
-            channel,
-            connectId: session.id,
-            connectCreated: session.connectTime,
-            bytes: session.socket.bytesRead,
-            ip: session.socket.remoteAddress,
-            audio:
-              session.audioCodec > 0
-                ? {
-                    codec: session.audioCodecName,
-                    profile: session.audioProfileName,
-                    samplerate: session.audioSamplerate,
-                    channels: session.audioChannels,
-                  }
-                : null,
-            video:
-              session.videoCodec > 0
-                ? {
-                    codec: session.videoCodecName,
-                    size: session.videoSize,
-                    fps: session.videoFps,
-                  }
-                : null,
-            userId: session.userId || null,
-          });
-
-          break;
-        }
-        case !!session.playStreamPath: {
-          switch (session.constructor.name) {
-            case 'NodeRtmpSession': {
-              stats[app][channel]['subscribers'].push({
-                app,
-                channel,
-                connectId: session.id,
-                connectCreated: session.connectTime,
-                bytes: session.socket.bytesWritten,
-                ip: session.socket.remoteAddress,
-                protocol: 'rtmp',
-                userId: session.userId || null,
-              });
-
-              break;
-            }
-            case 'NodeFlvSession': {
-              stats[app][channel]['subscribers'].push({
-                app,
-                channel,
-                connectId: session.id,
-                connectCreated: session.connectTime,
-                bytes: session.req.connection.bytesWritten,
-                ip: session.req.connection.remoteAddress,
-                protocol: session.TAG === 'websocket-flv' ? 'ws' : 'http',
-                userId: session.userId || null,
-              });
-
-              break;
-            }
-          }
-
-          break;
-        }
+      if (session.constructor.name === 'NodeFlvSession') {
+        liveChannel.subscribers.push({
+          app,
+          channel,
+          connectId: session.id,
+          connectCreated: session.connectTime,
+          bytes: session.req.connection.bytesWritten,
+          ip: session.req.connection.remoteAddress,
+          protocol: session.TAG === 'websocket-flv' ? 'ws' : 'http',
+          userId: session.userId || null,
+        });
       }
     }
+  }
+
+  res.json({
+    stats,
   });
-
-  res.json(stats);
-}
-
-export function getStream(req, res, next) {
-  const nms = req.nms;
-
-  const publishStreamPath = `/${req.params.app}/${req.params.stream}`;
-
-  const publisherSession = nms.sessions.get(
-    nms.publishers.get(publishStreamPath),
-  );
-
-  const isLive = !!publisherSession;
-
-  const viewers = _.filter(Array.from(nms.sessions.values()), (session) => {
-    return (session as any).playStreamPath === publishStreamPath;
-  }).length;
-
-  const duration = isLive
-    ? Math.ceil((Date.now() - publisherSession.startTimestamp) / 1000)
-    : 0;
-
-  const bitrate =
-    duration > 0
-      ? Math.ceil(
-          (_.get(publisherSession, ['socket', 'bytesRead'], 0) * 8) /
-            duration /
-            1024,
-        )
-      : 0;
-
-  const streamStats = {
-    isLive,
-    viewers,
-    duration,
-    bitrate,
-    startTime: isLive ? publisherSession.connectTime : null,
-  };
-
-  res.json(streamStats);
 }
