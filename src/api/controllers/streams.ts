@@ -53,6 +53,8 @@ export function getStreams(req, res, next) {
         connectCreated: session.connectTime,
         bytes: session.socket.bytesRead,
         ip: session.socket.remoteAddress,
+        protocol: 'rtmp',
+        userId: session.userId || null,
         audio: {
           audioCodec: session.audioCodec,
           codec: session.audioCodecName,
@@ -66,7 +68,6 @@ export function getStreams(req, res, next) {
           size: session.videoSize,
           fps: session.videoFps,
         },
-        userId: session.userId || null,
       };
     }
 
