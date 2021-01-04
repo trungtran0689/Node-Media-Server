@@ -176,10 +176,10 @@ export function generateS0S1S2(clientsig) {
   let allBytes;
 
   if (messageFormat === MESSAGE_FORMAT_0) {
-    //    console.log('[rtmp handshake] using simple handshake.');
+    // console.log('[rtmp handshake] using simple handshake.');
     allBytes = Buffer.concat([clientType, clientsig, clientsig]);
   } else {
-    //    console.log('[rtmp handshake] using complex handshake.');
+    // console.log('[rtmp handshake] using complex handshake.');
     allBytes = Buffer.concat([
       clientType,
       generateS1(messageFormat),

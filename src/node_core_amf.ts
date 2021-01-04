@@ -652,7 +652,7 @@ export function amf0decObject(buf) {
   const obj = {};
   let iBuf = buf.slice(1);
   let len = 1;
-  //    console.log('ODec',iBuf.readUInt8(0));
+  // console.log('ODec',iBuf.readUInt8(0));
 
   while (iBuf.readUInt8(0) !== 0x09) {
     // console.log('Field', iBuf.readUInt8(0), iBuf);
@@ -1044,7 +1044,7 @@ export function amf0Decode(buffer) {
  * @returns {*}
  */
 export function amfXEncodeOne(rules, o) {
-  //    console.log('amfXEncodeOne type',o,amfType(o),rules[amfType(o)]);
+  // console.log('amfXEncodeOne type',o,amfType(o),rules[amfType(o)]);
   const f = rules[amfType(o)];
 
   if (f) {

@@ -830,7 +830,7 @@ export class NodeRtmpSession extends EventEmitter {
     const rtmpBuffer = Buffer.from('02000000000004030000000000000000', 'hex');
 
     rtmpBuffer.writeUInt32BE(size, 12);
-    // //console.log('windowACK: '+rtmpBuffer.hex());
+    // console.log('windowACK: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
@@ -838,7 +838,7 @@ export class NodeRtmpSession extends EventEmitter {
     const rtmpBuffer = Buffer.from('02000000000004050000000000000000', 'hex');
 
     rtmpBuffer.writeUInt32BE(size, 12);
-    // //console.log('windowACK: '+rtmpBuffer.hex());
+    // console.log('windowACK: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
@@ -847,7 +847,7 @@ export class NodeRtmpSession extends EventEmitter {
 
     rtmpBuffer.writeUInt32BE(size, 12);
     rtmpBuffer[16] = type;
-    // //console.log('setPeerBandwidth: '+rtmpBuffer.hex());
+    // console.log('setPeerBandwidth: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
@@ -855,7 +855,7 @@ export class NodeRtmpSession extends EventEmitter {
     const rtmpBuffer = Buffer.from('02000000000004010000000000000000', 'hex');
 
     rtmpBuffer.writeUInt32BE(size, 12);
-    // //console.log('setChunkSize: '+rtmpBuffer.hex());
+    // console.log('setChunkSize: '+rtmpBuffer.hex());
     this.socket.write(rtmpBuffer);
   }
 
