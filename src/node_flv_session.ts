@@ -8,7 +8,7 @@ import { EventEmitter } from 'events';
 import { ParsedUrlQuery } from 'querystring';
 
 import { BufferPool } from './node_core_bufferpool';
-import { INodeMediaServerConfig } from './node_media_server';
+import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { nodeEvent } from './node_core_utils';
 
 export class NodeFlvSession extends EventEmitter {
@@ -25,7 +25,7 @@ export class NodeFlvSession extends EventEmitter {
   connectCmdObj: any;
   isStarting: boolean;
   connectTime: Date;
-  sessions: Map<string, any>;
+  sessions: Map<string, BaseSession>;
   publishers: Map<string, string>;
   idlePlayers: Set<string>;
   id: string;

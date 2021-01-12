@@ -7,6 +7,8 @@ import { EventEmitter } from 'events';
 import { nodeEvent } from './node_core_utils';
 import { NodeHttpServer } from './node_http_server';
 import { NodeRtmpServer } from './node_rtmp_server';
+import { NodeRtmpSession } from './node_rtmp_session';
+import { NodeFlvSession } from './node_flv_session';
 
 export interface INodeMediaServerConfig {
   rtmp: {
@@ -24,10 +26,13 @@ export interface INodeMediaServerConfig {
   };
 }
 
+export type BaseSession = { userId?: string } & NodeRtmpSession &
+  NodeFlvSession;
+
 export class NodeMediaServer {
   config: INodeMediaServerConfig;
 
-  sessions: Map<string, any>;
+  sessions: Map<string, BaseSession>;
   publishers: Map<string, string>;
   idlePlayers: Set<string>;
   nodeEvent: EventEmitter;

@@ -9,7 +9,7 @@ import { Express } from 'express';
 
 import { generateNewSessionID } from './node_core_utils';
 import { NodeFlvSession } from './node_flv_session';
-import { INodeMediaServerConfig } from './node_media_server';
+import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { authCheck } from './api/middleware/auth';
 import { getStreams } from './api/controllers/streams';
 
@@ -19,7 +19,7 @@ export class NodeHttpServer {
   config: INodeMediaServerConfig;
 
   port: number;
-  sessions: Map<string, any>;
+  sessions: Map<string, BaseSession>;
   publishers: Map<string, string>;
   idlePlayers: Set<string>;
 
@@ -102,7 +102,7 @@ export class NodeHttpServer {
     const id = generateNewSessionID();
     const session = new NodeFlvSession(this.config, req, res);
 
-    this.sessions.set(id, session);
+    this.sessions.set(id, session as BaseSession);
     session.id = id;
     session.sessions = this.sessions;
     session.publishers = this.publishers;

@@ -17,7 +17,7 @@ import { BufferPool } from './node_core_bufferpool';
 import { nodeEvent } from './node_core_utils';
 import { NodeFlvSession } from './node_flv_session';
 import { generateS0S1S2 } from './node_rtmp_handshake';
-import { INodeMediaServerConfig } from './node_media_server';
+import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 
 const EXTENDED_TIMESTAMP_TYPE_NOT_USED = 'not-used';
 const EXTENDED_TIMESTAMP_TYPE_ABSOLUTE = 'absolute';
@@ -113,7 +113,7 @@ export class NodeRtmpSession extends EventEmitter {
   publishStreamId: number;
   publishStreamPath: string;
   publishArgs: qs.ParsedUrlQuery;
-  sessions: Map<string, any>;
+  sessions: Map<string, BaseSession>;
   publishers: Map<string, string>;
   idlePlayers: Set<string>;
   startTimestamp: number;
@@ -758,7 +758,9 @@ export class NodeRtmpSession extends EventEmitter {
       if (session instanceof NodeRtmpSession) {
         rtmpMessage.writeUInt32LE(session.playStreamId, 8);
         session.socket.write(rtmpMessage);
-      } else if (session instanceof NodeFlvSession) {
+      }
+
+      if (session instanceof NodeFlvSession) {
         session.res.write(flvMessage, null, (e) => {
           // websocket will throw an error if cb is not set on close
         });
@@ -820,7 +822,9 @@ export class NodeRtmpSession extends EventEmitter {
       if (session instanceof NodeRtmpSession) {
         rtmpMessage.writeUInt32LE(session.playStreamId, 8);
         session.socket.write(rtmpMessage);
-      } else if (session instanceof NodeFlvSession) {
+      }
+
+      if (session instanceof NodeFlvSession) {
         session.res.write(flvMessage, null, (e) => {
           // websocket will throw an error if cb is not set on close
         });
@@ -1255,7 +1259,9 @@ export class NodeRtmpSession extends EventEmitter {
             'NetStream.Play.UnpublishNotify',
             'stream is now unpublished.',
           );
-        } else {
+        }
+
+        if (player instanceof NodeFlvSession) {
           player.stop();
         }
       }

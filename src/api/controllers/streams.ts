@@ -1,6 +1,8 @@
 import * as _ from 'lodash';
+import { NodeFlvSession } from '../../node_flv_session';
 
 import { NodeMediaServer } from '../../node_media_server';
+import { NodeRtmpSession } from '../../node_rtmp_session';
 
 export function getStreams(req, res, next) {
   const nms: NodeMediaServer = req.nms;
@@ -72,7 +74,7 @@ export function getStreams(req, res, next) {
     }
 
     if (session.playStreamPath) {
-      if (session.constructor.name === 'NodeRtmpSession') {
+      if (session instanceof NodeRtmpSession) {
         liveChannel.subscribers.push({
           app,
           channel,
@@ -85,7 +87,7 @@ export function getStreams(req, res, next) {
         });
       }
 
-      if (session.constructor.name === 'NodeFlvSession') {
+      if (session instanceof NodeFlvSession) {
         liveChannel.subscribers.push({
           app,
           channel,

@@ -5,6 +5,7 @@
 import * as net from 'net';
 
 import { generateNewSessionID } from './node_core_utils';
+import { BaseSession } from './node_media_server';
 import { NodeRtmpSession } from './node_rtmp_session';
 
 const RTMP_PORT = 1935;
@@ -20,7 +21,7 @@ export class NodeRtmpServer {
       const id = generateNewSessionID();
       const session = new NodeRtmpSession(config, socket);
 
-      sessions.set(id, session);
+      sessions.set(id, session as BaseSession);
       session.id = id;
       session.sessions = sessions;
       session.publishers = publishers;
