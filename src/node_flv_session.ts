@@ -50,13 +50,13 @@ export class NodeFlvSession extends EventEmitter {
     this.on('play', this.onPlay);
     this.on('publish', this.onPublish);
 
-    if (this.protocol === 'http') {
+    if (this.protocol === ProtocolsEnum.HTTP) {
       this.req.on('data', this.onReqData.bind(this));
       this.req.socket.on('close', this.onReqClose.bind(this));
       this.req.on('error', this.onReqError.bind(this));
     }
 
-    if (this.protocol === 'ws') {
+    if (this.protocol === ProtocolsEnum.WS) {
       this.res.on('message', this.onReqData.bind(this));
       this.res.on('close', this.onReqClose.bind(this));
       this.res.on('error', this.onReqError.bind(this));
@@ -65,7 +65,7 @@ export class NodeFlvSession extends EventEmitter {
     }
   }
 
-  run() {
+  public run() {
     const method = this.req.method;
     const urlInfo = url.parse(this.req.url, true);
     const streamPath = urlInfo.pathname.split('.')[0];
@@ -119,30 +119,30 @@ export class NodeFlvSession extends EventEmitter {
     }
   }
 
-  onReqData(data) {
+  private onReqData(data) {
     this.bp.push(data);
   }
 
-  onReqClose() {
+  private onReqClose() {
     this.stop();
   }
 
-  onReqError(e) {
+  private onReqError(e) {
     this.stop();
   }
 
-  stop() {
+  public stop() {
     if (this.isStarting) {
       this.isStarting = false;
       this.bp.stop();
     }
   }
 
-  reject() {
+  public reject() {
     this.stop();
   }
 
-  *handleData() {
+  protected *handleData() {
     console.log(`[${this.protocol} message parser] start`);
     while (this.isStarting) {
       if (this.bp.need(9)) {
@@ -179,15 +179,15 @@ export class NodeFlvSession extends EventEmitter {
     this.res = null;
   }
 
-  respondUnpublish() {
+  private respondUnpublish() {
     this.res.end();
   }
 
-  onConnect() {
+  protected onConnect() {
     // empty
   }
 
-  onPlay() {
+  protected onPlay() {
     this.nodeEvent.emit('prePlay', this.id, this.playStreamPath, this.playArgs);
 
     if (!this.isStarting) {
@@ -300,7 +300,7 @@ export class NodeFlvSession extends EventEmitter {
     );
   }
 
-  onPublish() {
+  protected onPublish() {
     // empty
   }
 
