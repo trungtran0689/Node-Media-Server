@@ -736,6 +736,7 @@ export class NodeRtmpSession extends EventEmitter {
         this.isFirstAudioReceived = true;
       }
     }
+
     // console.log('Audio chunkStreamID='+rtmpHeader.chunkStreamID+' '+rtmpHeader.messageStreamID);
     // console.log(`Send Audio message timestamp=${rtmpHeader.timestamp} timestampDelta=${rtmpHeader.timestampDelta} bytesRead=${this.socket.bytesRead}`);
 
@@ -759,7 +760,7 @@ export class NodeRtmpSession extends EventEmitter {
         session.socket.write(rtmpMessage);
       } else if (session instanceof NodeFlvSession) {
         session.res.write(flvMessage, null, (e) => {
-          //websocket will throw a error if not set the cb when closed
+          // websocket will throw an error if cb is not set on close
         });
       }
     }
@@ -793,6 +794,7 @@ export class NodeRtmpSession extends EventEmitter {
         this.isFirstVideoReceived = true;
       }
     }
+
     // console.log('Video chunkStreamID='+rtmpHeader.chunkStreamID+' '+rtmpHeader.messageStreamID);
     // console.log(`Send Video message timestamp=${rtmpHeader.timestamp} timestampDelta=${rtmpHeader.timestampDelta} `);
 
@@ -805,7 +807,7 @@ export class NodeRtmpSession extends EventEmitter {
         this.flvGopCacheQueue.clear();
       }
       if (frame_type === 1 && rtmpBody[1] === 0) {
-        //skip avc sequence header
+        // skip avc sequence header
       } else {
         this.rtmpGopCacheQueue.add(rtmpMessage);
         this.flvGopCacheQueue.add(flvMessage);
@@ -820,7 +822,7 @@ export class NodeRtmpSession extends EventEmitter {
         session.socket.write(rtmpMessage);
       } else if (session instanceof NodeFlvSession) {
         session.res.write(flvMessage, null, (e) => {
-          //websocket will throw a error if not set the cb when closed
+          // websocket will throw an error if cb is not set on close
         });
       }
     }
