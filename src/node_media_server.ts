@@ -77,7 +77,7 @@ export class NodeMediaServer {
     this.nodeEvent.on(eventName, listener);
   }
 
-  getSession(id) {
+  getSession(id: string) {
     return this.sessions.get(id);
   }
 }

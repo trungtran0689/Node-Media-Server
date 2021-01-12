@@ -13,12 +13,10 @@ import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { authCheck } from './api/middleware/auth';
 import { getStreams } from './api/controllers/streams';
 
-const HTTP_PORT = 80;
-
 export class NodeHttpServer {
   config: INodeMediaServerConfig;
 
-  port: number;
+  port: number | string;
   sessions: Map<string, BaseSession>;
   publishers: Map<string, string>;
   idlePlayers: Set<string>;
@@ -27,10 +25,15 @@ export class NodeHttpServer {
   httpServer: http.Server;
   wsServer: ws.Server;
 
-  constructor(config, sessions, publishers, idlePlayers) {
+  constructor(
+    config: INodeMediaServerConfig,
+    sessions: Map<string, BaseSession>,
+    publishers: Map<string, string>,
+    idlePlayers: Set<string>,
+  ) {
     this.config = config;
 
-    this.port = config.http.port ? config.http.port : HTTP_PORT;
+    this.port = config.http.port;
     this.sessions = sessions;
     this.publishers = publishers;
     this.idlePlayers = idlePlayers;
@@ -46,9 +49,7 @@ export class NodeHttpServer {
     });
 
     this.expressApp.get('*.flv', (req, res, next) => {
-      req['nmsConnectionType'] = 'http';
-
-      this.onConnect(req, res);
+      this.onConnect(req, res, 'http');
     });
 
     this.expressApp.use((req, res, next) => {
@@ -83,10 +84,8 @@ export class NodeHttpServer {
 
     this.wsServer = new ws.Server({ server: this.httpServer });
 
-    this.wsServer.on('connection', (ws, req) => {
-      req['nmsConnectionType'] = 'ws';
-
-      this.onConnect(req, ws);
+    this.wsServer.on('connection', (ws: http.ServerResponse, req) => {
+      this.onConnect(req, ws, 'ws');
     });
 
     this.wsServer.on('listening', () => {
@@ -98,15 +97,25 @@ export class NodeHttpServer {
     });
   }
 
-  onConnect(req, res) {
+  onConnect(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    nmsConnectionType: string,
+  ) {
     const id = generateNewSessionID();
-    const session = new NodeFlvSession(this.config, req, res);
+
+    const session = new NodeFlvSession(
+      id,
+      req,
+      res,
+      this.sessions,
+      this.publishers,
+      this.idlePlayers,
+      nmsConnectionType,
+    );
 
     this.sessions.set(id, session as BaseSession);
-    session.id = id;
-    session.sessions = this.sessions;
-    session.publishers = this.publishers;
-    session.idlePlayers = this.idlePlayers;
+
     session.run();
   }
 }

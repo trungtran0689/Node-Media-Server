@@ -5,27 +5,35 @@
 import * as net from 'net';
 
 import { generateNewSessionID } from './node_core_utils';
-import { BaseSession } from './node_media_server';
+import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { NodeRtmpSession } from './node_rtmp_session';
-
-const RTMP_PORT = 1935;
 
 export class NodeRtmpServer {
   port: number;
   tcpServer: net.Server;
 
-  constructor(config, sessions, publishers, idlePlayers) {
-    this.port = config.rtmp.port ? config.rtmp.port : RTMP_PORT;
+  constructor(
+    config: INodeMediaServerConfig,
+    sessions: Map<string, BaseSession>,
+    publishers: Map<string, string>,
+    idlePlayers: Set<string>,
+  ) {
+    this.port = config.rtmp.port;
 
     this.tcpServer = net.createServer((socket) => {
       const id = generateNewSessionID();
-      const session = new NodeRtmpSession(config, socket);
+
+      const session = new NodeRtmpSession(
+        id,
+        config,
+        socket,
+        sessions,
+        publishers,
+        idlePlayers,
+      );
 
       sessions.set(id, session as BaseSession);
-      session.id = id;
-      session.sessions = sessions;
-      session.publishers = publishers;
-      session.idlePlayers = idlePlayers;
+
       session.run();
     });
   }

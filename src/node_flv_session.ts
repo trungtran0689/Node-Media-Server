@@ -8,35 +8,31 @@ import { EventEmitter } from 'events';
 import { ParsedUrlQuery } from 'querystring';
 
 import { BufferPool } from './node_core_bufferpool';
-import { BaseSession, INodeMediaServerConfig } from './node_media_server';
+import { BaseSession } from './node_media_server';
 import { nodeEvent } from './node_core_utils';
 
 export class NodeFlvSession extends EventEmitter {
-  config: INodeMediaServerConfig;
+  protected bp: BufferPool;
+  private isPublisher: boolean;
+  public playStreamPath: string;
+  protected playArgs: ParsedUrlQuery;
+  protected nodeEvent: EventEmitter;
+  public TAG: string;
+  protected connectCmdObj: any;
+  public isStarting: boolean;
+  public connectTime: Date;
 
-  req: IncomingMessage;
-  res: ServerResponse;
-  bp: BufferPool;
-  isPublisher: boolean;
-  playStreamPath: string;
-  playArgs: ParsedUrlQuery;
-  nodeEvent: EventEmitter;
-  TAG: string;
-  connectCmdObj: any;
-  isStarting: boolean;
-  connectTime: Date;
-  sessions: Map<string, BaseSession>;
-  publishers: Map<string, string>;
-  idlePlayers: Set<string>;
-  id: string;
-
-  constructor(config, req, res) {
+  constructor(
+    public readonly id: string,
+    public req: IncomingMessage,
+    public res: ServerResponse,
+    protected sessions: Map<string, BaseSession>,
+    protected publishers: Map<string, string>,
+    protected idlePlayers: Set<string>,
+    private nmsConnectionType: string,
+  ) {
     super();
 
-    this.config = config;
-
-    this.req = req;
-    this.res = res;
     this.bp = new BufferPool();
     this.bp.on('error', (e) => {
       // empty
@@ -50,18 +46,20 @@ export class NodeFlvSession extends EventEmitter {
     this.on('play', this.onPlay);
     this.on('publish', this.onPublish);
 
-    if (req.nmsConnectionType === 'ws') {
+    if (this.nmsConnectionType === 'http') {
+      this.req.on('data', this.onReqData.bind(this));
+      this.req.socket.on('close', this.onReqClose.bind(this));
+      this.req.on('error', this.onReqError.bind(this));
+      this.TAG = 'http-flv';
+    }
+
+    if (this.nmsConnectionType === 'ws') {
       this.res.on('message', this.onReqData.bind(this));
       this.res.on('close', this.onReqClose.bind(this));
       this.res.on('error', this.onReqError.bind(this));
       this.res.write = this.res['send'];
       this.res.end = this.res['close'];
       this.TAG = 'websocket-flv';
-    } else {
-      this.req.on('data', this.onReqData.bind(this));
-      this.req.socket.on('close', this.onReqClose.bind(this));
-      this.req.on('error', this.onReqError.bind(this));
-      this.TAG = 'http-flv';
     }
   }
 

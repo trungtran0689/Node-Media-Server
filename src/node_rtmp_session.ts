@@ -32,7 +32,7 @@ const STREAM_READY = 0x20;
 
 const RTMP_CHUNK_SIZE = 128;
 const RTMP_PING_TIME = 60000;
-const RTMP_PING_TIMEOUT = 30000;
+const _RTMP_PING_TIMEOUT = 30000;
 
 const AUDIO_CODEC_NAME = [
   '',
@@ -70,66 +70,62 @@ const VIDEO_CODEC_NAME = [
 ];
 
 export class NodeRtmpSession extends EventEmitter {
-  config: INodeMediaServerConfig;
+  protected bp: BufferPool;
+  protected nodeEvent: EventEmitter;
+  public players: Set<string>;
+  private inChunkSize: number;
+  private outChunkSize: number;
+  private previousChunkMessage: any;
+  private ping: number;
+  private pingInterval: NodeJS.Timer;
+  public isStarting: boolean;
+  public isPublishing: boolean;
+  public isPlaying: boolean;
+  public isIdling: boolean;
+  public isFirstAudioReceived: boolean;
+  public isFirstVideoReceived: boolean;
+  public metaData: any;
+  public aacSequenceHeader: Buffer;
+  public avcSequenceHeader: Buffer;
+  public audioCodec: number;
+  public audioCodecName: string;
+  public audioProfileName: string;
+  public audioSamplerate: number;
+  public audioChannels: number;
+  public videoCodec: number;
+  public videoCodecName: string;
+  public videoSize: string;
+  public videoFps: number;
+  private gopCacheEnable: boolean;
+  private rtmpGopCacheQueue: Set<Buffer>;
+  public flvGopCacheQueue: Set<Buffer>;
+  private ackSize: number;
+  private inLastAck: number;
+  private appname: string;
+  private streams: number;
+  private playStreamId: number;
+  public playStreamPath: string;
+  public playArgs: qs.ParsedUrlQuery;
+  private publishStreamId: number;
+  public publishStreamPath: string;
+  public publishArgs: qs.ParsedUrlQuery;
+  private startTimestamp: number;
+  private objectEncoding: number;
+  public connectTime: Date;
+  protected connectCmdObj: any;
 
-  bp: BufferPool;
-  nodeEvent: EventEmitter;
-  socket: net.Socket;
-  players: Set<string>;
-  inChunkSize: number;
-  outChunkSize: number;
-  previousChunkMessage: any;
-  ping: number;
-  pingTimeout: number;
-  pingInterval: NodeJS.Timer;
-  isStarting: boolean;
-  isPublishing: boolean;
-  isPlaying: boolean;
-  isIdling: boolean;
-  isFirstAudioReceived: boolean;
-  isFirstVideoReceived: boolean;
-  metaData: any;
-  aacSequenceHeader: Buffer;
-  avcSequenceHeader: Buffer;
-  audioCodec: number;
-  audioCodecName: string;
-  audioProfileName: string;
-  audioSamplerate: number;
-  audioChannels: number;
-  videoCodec: number;
-  videoCodecName: string;
-  videoSize: string;
-  videoFps: number;
-  gopCacheEnable: boolean;
-  rtmpGopCacheQueue: Set<Buffer>;
-  flvGopCacheQueue: Set<Buffer>;
-  ackSize: number;
-  inLastAck: number;
-  appname: string;
-  streams: number;
-  playStreamId: number;
-  playStreamPath: string;
-  playArgs: qs.ParsedUrlQuery;
-  publishStreamId: number;
-  publishStreamPath: string;
-  publishArgs: qs.ParsedUrlQuery;
-  sessions: Map<string, BaseSession>;
-  publishers: Map<string, string>;
-  idlePlayers: Set<string>;
-  startTimestamp: number;
-  objectEncoding: number;
-  connectTime: Date;
-  id: string;
-  connectCmdObj: any;
-
-  constructor(config, socket) {
+  constructor(
+    public readonly id: string,
+    config: INodeMediaServerConfig,
+    public socket: net.Socket,
+    protected sessions: Map<string, BaseSession>,
+    protected publishers: Map<string, string>,
+    protected idlePlayers: Set<string>,
+  ) {
     super();
-
-    this.config = config;
 
     this.bp = new BufferPool();
     this.nodeEvent = nodeEvent;
-    this.socket = socket;
     this.players = null;
 
     this.inChunkSize = RTMP_CHUNK_SIZE;
@@ -139,9 +135,6 @@ export class NodeRtmpSession extends EventEmitter {
     this.previousChunkMessage = {};
 
     this.ping = config.rtmp.ping ? config.rtmp.ping * 1000 : RTMP_PING_TIME;
-    this.pingTimeout = config.rtmp.ping_timeout
-      ? config.rtmp.ping_timeout * 1000
-      : RTMP_PING_TIMEOUT;
     this.pingInterval = null;
 
     this.isStarting = false;

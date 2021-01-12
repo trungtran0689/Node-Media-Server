@@ -1,11 +1,11 @@
 import * as _ from 'lodash';
-import { NodeFlvSession } from '../../node_flv_session';
 
+import { NodeFlvSession } from '../../node_flv_session';
 import { NodeMediaServer } from '../../node_media_server';
 import { NodeRtmpSession } from '../../node_rtmp_session';
 
 export function getStreams(req, res, next) {
-  const nms: NodeMediaServer = req.nms;
+  const nms: NodeMediaServer = req['nms'];
 
   const stats = [];
 
