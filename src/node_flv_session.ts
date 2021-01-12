@@ -11,13 +11,17 @@ import { BufferPool } from './node_core_bufferpool';
 import { BaseSession } from './node_media_server';
 import { nodeEvent } from './node_core_utils';
 
+export enum ProtocolsEnum {
+  HTTP = 'http',
+  WS = 'ws',
+}
+
 export class NodeFlvSession extends EventEmitter {
   protected bp: BufferPool;
   private isPublisher: boolean;
   public playStreamPath: string;
   protected playArgs: ParsedUrlQuery;
   protected nodeEvent: EventEmitter;
-  public TAG: string;
   protected connectCmdObj: any;
   public isStarting: boolean;
   public connectTime: Date;
@@ -29,7 +33,7 @@ export class NodeFlvSession extends EventEmitter {
     protected sessions: Map<string, BaseSession>,
     protected publishers: Map<string, string>,
     protected idlePlayers: Set<string>,
-    private nmsConnectionType: string,
+    public protocol: ProtocolsEnum,
   ) {
     super();
 
@@ -46,20 +50,18 @@ export class NodeFlvSession extends EventEmitter {
     this.on('play', this.onPlay);
     this.on('publish', this.onPublish);
 
-    if (this.nmsConnectionType === 'http') {
+    if (this.protocol === 'http') {
       this.req.on('data', this.onReqData.bind(this));
       this.req.socket.on('close', this.onReqClose.bind(this));
       this.req.on('error', this.onReqError.bind(this));
-      this.TAG = 'http-flv';
     }
 
-    if (this.nmsConnectionType === 'ws') {
+    if (this.protocol === 'ws') {
       this.res.on('message', this.onReqData.bind(this));
       this.res.on('close', this.onReqClose.bind(this));
       this.res.on('error', this.onReqError.bind(this));
       this.res.write = this.res['send'];
       this.res.end = this.res['close'];
-      this.TAG = 'websocket-flv';
     }
   }
 
@@ -78,7 +80,7 @@ export class NodeFlvSession extends EventEmitter {
     this.connectTime = new Date();
 
     if (format !== 'flv') {
-      console.log(`[${this.TAG}] Unsupported format=${format}`);
+      console.log(`[${this.protocol}] Unsupported format=${format}`);
       this.res.statusCode = 403;
       this.res.end();
 
@@ -92,21 +94,23 @@ export class NodeFlvSession extends EventEmitter {
         //Play
         this.playStreamPath = streamPath;
         this.playArgs = urlInfo.query;
-        console.log(`[${this.TAG} play] play stream ` + this.playStreamPath);
+        console.log(
+          `[${this.protocol} play] play stream ` + this.playStreamPath,
+        );
         this.emit('play');
 
         return;
       }
       case 'POST': {
         //Publish
-        console.log(`[${this.TAG}] Unsupported method=` + method);
+        console.log(`[${this.protocol}] Unsupported method=` + method);
         this.res.statusCode = 405;
         this.res.end();
 
         return;
       }
       default: {
-        console.log(`[${this.TAG}] Unsupported method=` + method);
+        console.log(`[${this.protocol}] Unsupported method=` + method);
         this.res.statusCode = 405;
         this.res.end();
 
@@ -139,7 +143,7 @@ export class NodeFlvSession extends EventEmitter {
   }
 
   *handleData() {
-    console.log(`[${this.TAG} message parser] start`);
+    console.log(`[${this.protocol} message parser] start`);
     while (this.isStarting) {
       if (this.bp.need(9)) {
         if (yield) {
@@ -148,7 +152,7 @@ export class NodeFlvSession extends EventEmitter {
       }
     }
 
-    console.log(`[${this.TAG} message parser] done`);
+    console.log(`[${this.protocol} message parser] done`);
     if (!this.isPublisher) {
       const publisherId = this.publishers.get(this.playStreamPath);
 
@@ -191,7 +195,9 @@ export class NodeFlvSession extends EventEmitter {
     }
 
     if (!this.publishers.has(this.playStreamPath)) {
-      console.log(`[${this.TAG} play] stream not found ` + this.playStreamPath);
+      console.log(
+        `[${this.protocol} play] stream not found ` + this.playStreamPath,
+      );
       this.idlePlayers.add(this.id);
 
       return;
@@ -285,7 +291,7 @@ export class NodeFlvSession extends EventEmitter {
         this.res.write(flvMessage);
       }
     }
-    console.log(`[${this.TAG} play] join stream ` + this.playStreamPath);
+    console.log(`[${this.protocol} play] join stream ` + this.playStreamPath);
     this.nodeEvent.emit(
       'postPlay',
       this.id,

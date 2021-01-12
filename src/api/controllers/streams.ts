@@ -95,7 +95,7 @@ export function getStreams(req, res, next) {
           connectCreated: session.connectTime,
           bytes: session.req.connection.bytesWritten,
           ip: session.req.connection.remoteAddress,
-          protocol: session.TAG === 'websocket-flv' ? 'ws' : 'http',
+          protocol: session.protocol,
           userId: session.userId || null,
         });
       }

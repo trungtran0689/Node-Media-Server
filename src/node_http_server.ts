@@ -8,7 +8,7 @@ import * as express from 'express';
 import { Express } from 'express';
 
 import { generateNewSessionID } from './node_core_utils';
-import { NodeFlvSession } from './node_flv_session';
+import { NodeFlvSession, ProtocolsEnum } from './node_flv_session';
 import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { authCheck } from './api/middleware/auth';
 import { getStreams } from './api/controllers/streams';
@@ -49,7 +49,7 @@ export class NodeHttpServer {
     });
 
     this.expressApp.get('*.flv', (req, res, next) => {
-      this.onConnect(req, res, 'http');
+      this.onConnect(req, res, ProtocolsEnum.HTTP);
     });
 
     this.expressApp.use((req, res, next) => {
@@ -85,7 +85,7 @@ export class NodeHttpServer {
     this.wsServer = new ws.Server({ server: this.httpServer });
 
     this.wsServer.on('connection', (ws: http.ServerResponse, req) => {
-      this.onConnect(req, ws, 'ws');
+      this.onConnect(req, ws, ProtocolsEnum.WS);
     });
 
     this.wsServer.on('listening', () => {
@@ -100,7 +100,7 @@ export class NodeHttpServer {
   onConnect(
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    nmsConnectionType: string,
+    protocol: ProtocolsEnum,
   ) {
     const id = generateNewSessionID();
 
@@ -111,7 +111,7 @@ export class NodeHttpServer {
       this.sessions,
       this.publishers,
       this.idlePlayers,
-      nmsConnectionType,
+      protocol,
     );
 
     this.sessions.set(id, session as BaseSession);
