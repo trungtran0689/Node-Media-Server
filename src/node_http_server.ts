@@ -14,16 +14,14 @@ import { authCheck } from './api/middleware/auth';
 import { getStreams } from './api/controllers/streams';
 
 export class NodeHttpServer {
-  config: INodeMediaServerConfig;
+  private readonly port: number | string;
+  private readonly sessions: Map<string, BaseSession>;
+  private readonly publishers: Map<string, string>;
+  private readonly idlePlayers: Set<string>;
 
-  port: number | string;
-  sessions: Map<string, BaseSession>;
-  publishers: Map<string, string>;
-  idlePlayers: Set<string>;
-
-  expressApp: Express;
-  httpServer: http.Server;
-  wsServer: ws.Server;
+  private readonly expressApp: Express;
+  private httpServer: http.Server;
+  private wsServer: ws.Server;
 
   constructor(
     config: INodeMediaServerConfig,
@@ -31,8 +29,6 @@ export class NodeHttpServer {
     publishers: Map<string, string>,
     idlePlayers: Set<string>,
   ) {
-    this.config = config;
-
     this.port = config.http.port;
     this.sessions = sessions;
     this.publishers = publishers;
@@ -69,11 +65,11 @@ export class NodeHttpServer {
     this.expressApp.use((err, req, res, next) => {
       res.status(500).send(err.message);
     });
-
-    this.httpServer = http.createServer(this.expressApp);
   }
 
   run() {
+    this.httpServer = http.createServer(this.expressApp);
+
     this.httpServer.listen(this.port, () => {
       console.log(`Node Media Http Server started on port: ${this.port}`);
     });

@@ -30,15 +30,15 @@ export type BaseSession = { userId?: string } & NodeRtmpSession &
   NodeFlvSession;
 
 export class NodeMediaServer {
-  config: INodeMediaServerConfig;
+  private readonly config: INodeMediaServerConfig;
 
-  sessions: Map<string, BaseSession>;
-  publishers: Map<string, string>;
-  idlePlayers: Set<string>;
-  nodeEvent: EventEmitter;
+  public readonly sessions: Map<string, BaseSession>;
+  private readonly publishers: Map<string, string>;
+  private readonly idlePlayers: Set<string>;
+  private readonly nodeEvent: EventEmitter;
 
-  nrs: NodeRtmpServer;
-  nhs: NodeHttpServer;
+  private nrs: NodeRtmpServer;
+  private nhs: NodeHttpServer;
 
   constructor(config: INodeMediaServerConfig) {
     this.config = config;

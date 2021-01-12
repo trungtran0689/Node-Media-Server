@@ -9,8 +9,8 @@ import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { NodeRtmpSession } from './node_rtmp_session';
 
 export class NodeRtmpServer {
-  port: number;
-  tcpServer: net.Server;
+  private readonly port: number;
+  private readonly tcpServer: net.Server;
 
   constructor(
     config: INodeMediaServerConfig,
