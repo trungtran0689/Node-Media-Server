@@ -70,7 +70,7 @@ const VIDEO_CODEC_NAME = [
 ];
 
 export class NodeRtmpSession extends EventEmitter {
-  protected bp: BufferPool;
+  protected readonly bp: BufferPool;
   protected nodeEvent: EventEmitter;
   public players: Set<string>;
   private inChunkSize: number;
@@ -117,10 +117,10 @@ export class NodeRtmpSession extends EventEmitter {
   constructor(
     public readonly id: string,
     config: INodeMediaServerConfig,
-    public socket: net.Socket,
-    protected sessions: Map<string, BaseSession>,
-    protected publishers: Map<string, string>,
-    protected idlePlayers: Set<string>,
+    public readonly socket: net.Socket,
+    protected readonly sessions: Map<string, BaseSession>,
+    protected readonly publishers: Map<string, string>,
+    protected readonly idlePlayers: Set<string>,
   ) {
     super();
 
@@ -454,16 +454,12 @@ export class NodeRtmpSession extends EventEmitter {
       clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
+
     this.nodeEvent.emit('doneConnect', this.id, this.connectCmdObj);
     this.socket.end();
     this.socket.removeAllListeners('data');
     this.socket.removeAllListeners('close');
     this.sessions.delete(this.id);
-    this.idlePlayers = null;
-    this.publishers = null;
-    this.sessions = null;
-    this.bp = null;
-    this.socket = null;
   }
 
   private createChunkBasicHeader(fmt, id) {

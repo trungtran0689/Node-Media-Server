@@ -17,7 +17,7 @@ export enum ProtocolsEnum {
 }
 
 export class NodeFlvSession extends EventEmitter {
-  protected bp: BufferPool;
+  protected readonly bp: BufferPool;
   private isPublisher: boolean;
   public playStreamPath: string;
   protected playArgs: ParsedUrlQuery;
@@ -28,12 +28,12 @@ export class NodeFlvSession extends EventEmitter {
 
   constructor(
     public readonly id: string,
-    public req: IncomingMessage,
-    public res: ServerResponse,
-    protected sessions: Map<string, BaseSession>,
-    protected publishers: Map<string, string>,
-    protected idlePlayers: Set<string>,
-    public protocol: ProtocolsEnum,
+    public readonly req: IncomingMessage,
+    public readonly res: ServerResponse,
+    protected readonly sessions: Map<string, BaseSession>,
+    protected readonly publishers: Map<string, string>,
+    protected readonly idlePlayers: Set<string>,
+    public readonly protocol: ProtocolsEnum,
   ) {
     super();
 
@@ -171,12 +171,6 @@ export class NodeFlvSession extends EventEmitter {
     this.res.end();
     this.idlePlayers.delete(this.id);
     this.sessions.delete(this.id);
-    this.idlePlayers = null;
-    this.publishers = null;
-    this.sessions = null;
-    this.bp = null;
-    this.req = null;
-    this.res = null;
   }
 
   private respondUnpublish() {
