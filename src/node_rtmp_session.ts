@@ -902,9 +902,9 @@ export class NodeRtmpSession extends EventEmitter {
       transId: 0,
       cmdObj: null,
       info: {
-        level: level,
-        code: code,
-        description: description,
+        level,
+        code,
+        description,
       },
     };
     const rtmpBody = encodeAmf0Cmd(opt);

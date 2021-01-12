@@ -63,5 +63,7 @@ module.exports = {
     ],
     'no-return-await': 'off',
     '@typescript-eslint/return-await': 'error',
+    'object-shorthand': 'error',
+    'no-useless-rename': 'error',
   },
 };

@@ -212,7 +212,7 @@ export function amf3decUI29(buf) {
     val = val | b;
   } // Preserve the major bit of the last byte
 
-  return { len: len, value: val };
+  return { len, value: val };
 }
 
 /**
@@ -676,7 +676,7 @@ export function amf0decObject(buf) {
     iBuf = iBuf.slice(prop.len + val.len);
   }
 
-  return { len: len, value: obj };
+  return { len, value: obj };
 }
 
 /**
@@ -905,7 +905,7 @@ export function amf0decSArray(buf) {
     len += ret.len;
   }
 
-  return { len: len, value: amf0markSArray(a) };
+  return { len, value: amf0markSArray(a) };
 }
 
 /**
