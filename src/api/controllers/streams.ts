@@ -55,18 +55,18 @@ export function getStreams(req, res, next) {
         bytes: session.socket.bytesRead,
         ip: session.socket.remoteAddress,
         protocol: 'rtmp',
+        video: {
+          codecId: session.videoCodec,
+          codecName: session.videoCodecName,
+          size: session.videoSize,
+          fps: session.videoFps,
+        },
         audio: {
-          codecCode: session.audioCodec,
+          codecId: session.audioCodec,
           codecName: session.audioCodecName,
           profile: session.audioProfileName,
           sampleRate: session.audioSamplerate,
           channels: session.audioChannels,
-        },
-        video: {
-          codecCode: session.videoCodec,
-          codecName: session.videoCodecName,
-          size: session.videoSize,
-          fps: session.videoFps,
         },
         meta: session.getMetadata(),
       };
