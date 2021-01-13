@@ -167,7 +167,7 @@ export class NodeRtmpSession extends EventEmitter {
   public addMetadata(data) {
     this.sessionMetadata = {
       ...this.sessionMetadata,
-      data,
+      ...data,
     };
   }
 

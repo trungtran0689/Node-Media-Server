@@ -67,7 +67,7 @@ export class NodeFlvSession extends EventEmitter {
   public addMetadata(data) {
     this.sessionMetadata = {
       ...this.sessionMetadata,
-      data,
+      ...data,
     };
   }
 
