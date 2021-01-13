@@ -1047,6 +1047,7 @@ export class NodeRtmpSession extends EventEmitter {
         'NetStream.Publish.Start',
         `${this.streamPath} is now published.`,
       );
+
       for (const idlePlayerId of this.idlePlayers) {
         const idlePlayer = this.sessions.get(idlePlayerId);
 
@@ -1055,6 +1056,7 @@ export class NodeRtmpSession extends EventEmitter {
           this.idlePlayers.delete(idlePlayerId);
         }
       }
+
       this.nodeEvent.emit(
         'postPublish',
         this.id,
