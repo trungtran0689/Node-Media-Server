@@ -1,4 +1,5 @@
 import * as _ from 'lodash';
+import { SessionTypeEnum } from '../../node_base_session';
 
 import { NodeFlvSession } from '../../node_flv_session';
 import { NodeMediaServer } from '../../node_media_server';
@@ -10,19 +11,17 @@ export function getStreams(req, res, next) {
   const stats = [];
 
   for (const [, session] of nms.sessions) {
-    if (!session.isStarting) {
+    if (!session.isActive) {
       continue;
     }
 
-    const regRes = /\/(.*)\/(.*)/gi.exec(
-      session.publishStreamPath || session.playStreamPath,
-    );
+    const regRes = /\/(.+)\/(.+)/gi.exec(session.streamPath);
 
-    if (regRes === null) {
+    if (!regRes) {
       continue;
     }
 
-    const [app, channel] = _.slice(regRes, 1);
+    const [, app, channel] = regRes;
 
     let liveApp = _.find(stats, { app });
 
@@ -47,7 +46,7 @@ export function getStreams(req, res, next) {
       liveApp.channels.push(liveChannel);
     }
 
-    if (session.isPublishing) {
+    if (session.sessionType === SessionTypeEnum.PUBLISHER) {
       liveChannel.publisher = {
         app,
         channel,
@@ -56,24 +55,24 @@ export function getStreams(req, res, next) {
         bytes: session.socket.bytesRead,
         ip: session.socket.remoteAddress,
         protocol: 'rtmp',
-        userId: session.userId || null,
         audio: {
-          audioCodec: session.audioCodec,
-          codec: session.audioCodecName,
+          codecCode: session.audioCodec,
+          codecName: session.audioCodecName,
           profile: session.audioProfileName,
-          samplerate: session.audioSamplerate,
+          sampleRate: session.audioSamplerate,
           channels: session.audioChannels,
         },
         video: {
-          videoCodec: session.videoCodec,
-          codec: session.videoCodecName,
+          codecCode: session.videoCodec,
+          codecName: session.videoCodecName,
           size: session.videoSize,
           fps: session.videoFps,
         },
+        meta: session.getMetadata(),
       };
     }
 
-    if (session.playStreamPath) {
+    if (session.sessionType === SessionTypeEnum.SUBSCRIBER) {
       if (session instanceof NodeRtmpSession) {
         liveChannel.subscribers.push({
           app,
@@ -83,7 +82,7 @@ export function getStreams(req, res, next) {
           bytes: session.socket.bytesWritten,
           ip: session.socket.remoteAddress,
           protocol: 'rtmp',
-          userId: session.userId || null,
+          meta: session.getMetadata(),
         });
       }
 
@@ -96,7 +95,7 @@ export function getStreams(req, res, next) {
           bytes: session.req.connection.bytesWritten,
           ip: session.req.connection.remoteAddress,
           protocol: session.protocol,
-          userId: session.userId || null,
+          meta: session.getMetadata(),
         });
       }
     }

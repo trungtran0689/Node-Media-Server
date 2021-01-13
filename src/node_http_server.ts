@@ -12,12 +12,10 @@ import { NodeFlvSession, ProtocolsEnum } from './node_flv_session';
 import { BaseSession, INodeMediaServerConfig } from './node_media_server';
 import { authCheck } from './api/middleware/auth';
 import { getStreams } from './api/controllers/streams';
+import { EventEmitter } from 'events';
 
 export class NodeHttpServer {
   private readonly port: number | string;
-  private readonly sessions: Map<string, BaseSession>;
-  private readonly publishers: Map<string, string>;
-  private readonly idlePlayers: Set<string>;
 
   private readonly expressApp: Express;
   private httpServer: http.Server;
@@ -25,14 +23,12 @@ export class NodeHttpServer {
 
   constructor(
     config: INodeMediaServerConfig,
-    sessions: Map<string, BaseSession>,
-    publishers: Map<string, string>,
-    idlePlayers: Set<string>,
+    private readonly sessions: Map<string, BaseSession>,
+    private readonly publishers: Map<string, string>,
+    private readonly idlePlayers: Set<string>,
+    private readonly nodeEvent: EventEmitter,
   ) {
     this.port = config.http.port;
-    this.sessions = sessions;
-    this.publishers = publishers;
-    this.idlePlayers = idlePlayers;
 
     this.expressApp = express();
 
@@ -107,6 +103,7 @@ export class NodeHttpServer {
       this.sessions,
       this.publishers,
       this.idlePlayers,
+      this.nodeEvent,
       protocol,
     );
 

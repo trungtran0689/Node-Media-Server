@@ -9,7 +9,7 @@ import { ParsedUrlQuery } from 'querystring';
 
 import { BufferPool } from './node_core_bufferpool';
 import { BaseSession } from './node_media_server';
-import { nodeEvent } from './node_core_utils';
+import { SessionTypeEnum } from './node_base_session';
 
 export enum ProtocolsEnum {
   HTTP = 'http',
@@ -18,13 +18,13 @@ export enum ProtocolsEnum {
 
 export class NodeFlvSession extends EventEmitter {
   protected readonly bp: BufferPool;
-  private isPublisher: boolean;
-  public playStreamPath: string;
-  protected playArgs: ParsedUrlQuery;
-  protected nodeEvent: EventEmitter;
+  public streamPath: string;
+  public streamArgs: ParsedUrlQuery;
   protected connectCmdObj: any;
-  public isStarting: boolean;
-  public connectTime: Date;
+  public isActive = false;
+  public readonly connectTime = new Date();
+  public sessionType = SessionTypeEnum.CONNECTED;
+  protected sessionMetadata: any = {};
 
   constructor(
     public readonly id: string,
@@ -33,18 +33,15 @@ export class NodeFlvSession extends EventEmitter {
     protected readonly sessions: Map<string, BaseSession>,
     protected readonly publishers: Map<string, string>,
     protected readonly idlePlayers: Set<string>,
+    protected readonly nodeEvent: EventEmitter,
     public readonly protocol: ProtocolsEnum,
   ) {
     super();
 
     this.bp = new BufferPool();
-    this.bp.on('error', (e) => {
-      // empty
+    this.bp.on('error', (error) => {
+      console.log('buffer_pool_error', error.message);
     });
-    this.isPublisher = false;
-    this.playStreamPath = '';
-    this.playArgs = null;
-    this.nodeEvent = nodeEvent;
 
     this.on('connect', this.onConnect);
     this.on('play', this.onPlay);
@@ -63,6 +60,19 @@ export class NodeFlvSession extends EventEmitter {
       this.res.write = this.res['send'];
       this.res.end = this.res['close'];
     }
+
+    this.sessionType = SessionTypeEnum.ACCEPTED;
+  }
+
+  public addMetadata(data) {
+    this.sessionMetadata = {
+      ...this.sessionMetadata,
+      data,
+    };
+  }
+
+  public getMetadata() {
+    return this.sessionMetadata;
   }
 
   public run() {
@@ -74,10 +84,8 @@ export class NodeFlvSession extends EventEmitter {
     this.connectCmdObj = { method, streamPath, query: urlInfo.query };
     this.nodeEvent.emit('preConnect', this.id, this.connectCmdObj);
 
-    this.isStarting = true;
+    this.isActive = true;
     this.bp.init(this.handleData());
-
-    this.connectTime = new Date();
 
     if (format !== 'flv') {
       console.log(`[${this.protocol}] Unsupported format=${format}`);
@@ -92,11 +100,9 @@ export class NodeFlvSession extends EventEmitter {
     switch (method) {
       case 'GET': {
         //Play
-        this.playStreamPath = streamPath;
-        this.playArgs = urlInfo.query;
-        console.log(
-          `[${this.protocol} play] play stream ` + this.playStreamPath,
-        );
+        this.streamPath = streamPath;
+        this.streamArgs = urlInfo.query;
+        console.log(`[${this.protocol} play] play stream ` + this.streamPath);
         this.emit('play');
 
         return;
@@ -132,8 +138,8 @@ export class NodeFlvSession extends EventEmitter {
   }
 
   public stop() {
-    if (this.isStarting) {
-      this.isStarting = false;
+    if (this.isActive) {
+      this.isActive = false;
       this.bp.stop();
     }
   }
@@ -144,7 +150,8 @@ export class NodeFlvSession extends EventEmitter {
 
   protected *handleData() {
     console.log(`[${this.protocol} message parser] start`);
-    while (this.isStarting) {
+
+    while (this.isActive) {
       if (this.bp.need(9)) {
         if (yield) {
           break;
@@ -153,18 +160,17 @@ export class NodeFlvSession extends EventEmitter {
     }
 
     console.log(`[${this.protocol} message parser] done`);
-    if (!this.isPublisher) {
-      const publisherId = this.publishers.get(this.playStreamPath);
 
-      if (publisherId) {
-        this.sessions.get(publisherId).players.delete(this.id);
-        this.nodeEvent.emit(
-          'donePlay',
-          this.id,
-          this.playStreamPath,
-          this.playArgs,
-        );
-      }
+    const publisherId = this.publishers.get(this.streamPath);
+
+    if (publisherId) {
+      this.sessions.get(publisherId).players.delete(this.id);
+      this.nodeEvent.emit(
+        'donePlay',
+        this.id,
+        this.streamPath,
+        this.streamArgs,
+      );
     }
 
     this.nodeEvent.emit('doneConnect', this.id, this.connectCmdObj);
@@ -182,22 +188,24 @@ export class NodeFlvSession extends EventEmitter {
   }
 
   protected onPlay() {
-    this.nodeEvent.emit('prePlay', this.id, this.playStreamPath, this.playArgs);
+    this.nodeEvent.emit('prePlay', this.id, this.streamPath, this.streamArgs);
 
-    if (!this.isStarting) {
+    if (!this.isActive) {
       return;
     }
 
-    if (!this.publishers.has(this.playStreamPath)) {
+    this.sessionType = SessionTypeEnum.SUBSCRIBER;
+
+    if (!this.publishers.has(this.streamPath)) {
       console.log(
-        `[${this.protocol} play] stream not found ` + this.playStreamPath,
+        `[${this.protocol} play] stream not found ` + this.streamPath,
       );
       this.idlePlayers.add(this.id);
 
       return;
     }
 
-    const publisherId = this.publishers.get(this.playStreamPath);
+    const publisherId = this.publishers.get(this.streamPath);
     const publisher = this.sessions.get(publisherId);
     const players = publisher.players;
 
@@ -279,19 +287,15 @@ export class NodeFlvSession extends EventEmitter {
 
       this.res.write(flvMessage);
     }
+
     //send gop cache
     if (publisher.flvGopCacheQueue) {
       for (const flvMessage of publisher.flvGopCacheQueue) {
         this.res.write(flvMessage);
       }
     }
-    console.log(`[${this.protocol} play] join stream ` + this.playStreamPath);
-    this.nodeEvent.emit(
-      'postPlay',
-      this.id,
-      this.playStreamPath,
-      this.playArgs,
-    );
+    console.log(`[${this.protocol} play] join stream ` + this.streamPath);
+    this.nodeEvent.emit('postPlay', this.id, this.streamPath, this.streamArgs);
   }
 
   protected onPublish() {

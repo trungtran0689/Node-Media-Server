@@ -14,10 +14,10 @@ import {
   encodeAmf0Data,
 } from './node_core_amf';
 import { BufferPool } from './node_core_bufferpool';
-import { nodeEvent } from './node_core_utils';
 import { NodeFlvSession } from './node_flv_session';
 import { generateS0S1S2 } from './node_rtmp_handshake';
 import { BaseSession, INodeMediaServerConfig } from './node_media_server';
+import { SessionTypeEnum } from './node_base_session';
 
 const EXTENDED_TIMESTAMP_TYPE_NOT_USED = 'not-used';
 const EXTENDED_TIMESTAMP_TYPE_ABSOLUTE = 'absolute';
@@ -71,19 +71,18 @@ const VIDEO_CODEC_NAME = [
 
 export class NodeRtmpSession extends EventEmitter {
   protected readonly bp: BufferPool;
-  protected nodeEvent: EventEmitter;
   public players: Set<string>;
   private inChunkSize: number;
   private outChunkSize: number;
   private previousChunkMessage: any;
   private ping: number;
   private pingInterval: NodeJS.Timer;
-  public isStarting: boolean;
-  public isPublishing: boolean;
-  public isPlaying: boolean;
-  public isIdling: boolean;
-  public isFirstAudioReceived: boolean;
-  public isFirstVideoReceived: boolean;
+  public isActive = false;
+  public isPublishing = false;
+  public isPlaying = false;
+  public isIdling = false;
+  public isFirstAudioReceived = false;
+  public isFirstVideoReceived = false;
   public metaData: any;
   public aacSequenceHeader: Buffer;
   public avcSequenceHeader: Buffer;
@@ -97,22 +96,22 @@ export class NodeRtmpSession extends EventEmitter {
   public videoSize: string;
   public videoFps: number;
   private gopCacheEnable: boolean;
-  private rtmpGopCacheQueue: Set<Buffer>;
+  public rtmpGopCacheQueue: Set<Buffer>;
   public flvGopCacheQueue: Set<Buffer>;
-  private ackSize: number;
-  private inLastAck: number;
-  private appname: string;
-  private streams: number;
-  private playStreamId: number;
-  public playStreamPath: string;
-  public playArgs: qs.ParsedUrlQuery;
-  private publishStreamId: number;
-  public publishStreamPath: string;
-  public publishArgs: qs.ParsedUrlQuery;
+  private ackSize = 0;
+  private inLastAck = 0;
+  private appName: string;
+  private streams = 0;
+  private playStreamId = 0;
+  public streamPath: string;
+  public streamArgs: qs.ParsedUrlQuery;
+  private publishStreamId = 0;
   private startTimestamp: number;
   private objectEncoding: number;
-  public connectTime: Date;
+  public readonly connectTime = new Date();
   protected connectCmdObj: any;
+  public sessionType = SessionTypeEnum.CONNECTED;
+  protected sessionMetadata: any = {};
 
   constructor(
     public readonly id: string,
@@ -121,59 +120,22 @@ export class NodeRtmpSession extends EventEmitter {
     protected readonly sessions: Map<string, BaseSession>,
     protected readonly publishers: Map<string, string>,
     protected readonly idlePlayers: Set<string>,
+    protected readonly nodeEvent: EventEmitter,
   ) {
     super();
 
     this.bp = new BufferPool();
-    this.nodeEvent = nodeEvent;
-    this.players = null;
+    this.bp.on('error', (error) => {
+      console.log('buffer_pool_error', error.message);
+    });
 
     this.inChunkSize = RTMP_CHUNK_SIZE;
-    this.outChunkSize = config.rtmp.chunk_size
-      ? config.rtmp.chunk_size
-      : RTMP_CHUNK_SIZE;
+    this.outChunkSize = config.rtmp.chunkSize || RTMP_CHUNK_SIZE;
     this.previousChunkMessage = {};
 
     this.ping = config.rtmp.ping ? config.rtmp.ping * 1000 : RTMP_PING_TIME;
-    this.pingInterval = null;
 
-    this.isStarting = false;
-    this.isPublishing = false;
-    this.isPlaying = false;
-    this.isIdling = false;
-    this.isFirstAudioReceived = false;
-    this.isFirstVideoReceived = false;
-    this.metaData = null;
-    this.aacSequenceHeader = null;
-    this.avcSequenceHeader = null;
-    this.audioCodec = 0;
-    this.audioCodecName = '';
-    this.audioProfileName = '';
-    this.audioSamplerate = 0;
-    this.audioChannels = 1;
-    this.videoCodec = 0;
-    this.videoCodecName = '';
-    this.videoSize = 0 + 'x' + 0;
-    this.videoFps = 0;
-
-    this.gopCacheEnable = config.rtmp.gop_cache;
-    this.rtmpGopCacheQueue = null;
-    this.flvGopCacheQueue = null;
-
-    this.ackSize = 0;
-    this.inLastAck = 0;
-
-    this.appname = '';
-
-    this.streams = 0;
-
-    this.playStreamId = 0;
-    this.playStreamPath = '';
-    this.playArgs = undefined;
-
-    this.publishStreamId = 0;
-    this.publishStreamPath = '';
-    this.publishArgs = undefined;
+    this.gopCacheEnable = config.rtmp.gopCache;
 
     this.on('connect', this.onConnect);
     this.on('publish', this.onPublish);
@@ -202,20 +164,31 @@ export class NodeRtmpSession extends EventEmitter {
     });
   }
 
+  public addMetadata(data) {
+    this.sessionMetadata = {
+      ...this.sessionMetadata,
+      data,
+    };
+  }
+
+  public getMetadata() {
+    return this.sessionMetadata;
+  }
+
   public run() {
-    this.isStarting = true;
+    this.isActive = true;
     this.bp.init(this.handleData());
   }
 
   public stop() {
-    if (this.isStarting) {
-      this.isStarting = false;
+    if (this.isActive) {
+      this.isActive = false;
       this.bp.stop();
     }
   }
 
   public reject() {
-    this.isStarting = false;
+    this.isActive = false;
   }
 
   private onSocketData(data) {
@@ -247,12 +220,15 @@ export class NodeRtmpSession extends EventEmitter {
         return;
       }
     }
+
     const _c2 = this.bp.read(1536);
 
     console.log('[rtmp handshake] done');
     console.log('[rtmp message parser]  start');
+
     this.bp.readBytes = 0;
-    while (this.isStarting) {
+
+    while (this.isActive) {
       const message: any = {};
       let chunkMessageHeader = null;
       let previousChunk = null;
@@ -262,6 +238,7 @@ export class NodeRtmpSession extends EventEmitter {
           break;
         }
       }
+
       const chunkBasicHeader = this.bp.read(1);
 
       message.formatType = chunkBasicHeader[0] >> 6;
@@ -289,7 +266,9 @@ export class NodeRtmpSession extends EventEmitter {
       } else {
         // Chunk basic header 1  2-63
       }
+
       previousChunk = this.previousChunkMessage[message.chunkStreamID];
+
       if (message.formatType === 0) {
         //Type 0 (11 bytes)
         if (this.bp.need(11)) {
@@ -423,12 +402,12 @@ export class NodeRtmpSession extends EventEmitter {
             message.timestamp %= TIMESTAMP_ROUNDOFF;
           }
         }
-        let rtmpBody = Buffer.concat(message.chunks);
+
+        const rtmpBody = Buffer.concat(message.chunks);
 
         this.handleRTMPMessage(message, rtmpBody);
         message.receivedLength = 0;
         message.chunks = [];
-        rtmpBody = null;
       }
       this.previousChunkMessage[message.chunkStreamID] = message;
 
@@ -654,17 +633,17 @@ export class NodeRtmpSession extends EventEmitter {
         // this.respondFCPublish();
         break;
       case 'publish':
-        this.publishStreamPath =
-          '/' + this.appname + '/' + commandMessage.streamName.split('?')[0];
-        this.publishArgs = qs.parse(commandMessage.streamName.split('?')[1]);
+        this.streamPath =
+          '/' + this.appName + '/' + commandMessage.streamName.split('?')[0];
+        this.streamArgs = qs.parse(commandMessage.streamName.split('?')[1]);
         this.publishStreamId = streamID;
         // console.log('publish streamID=' + streamID);
         this.emit('publish');
         break;
       case 'play':
-        this.playStreamPath =
-          '/' + this.appname + '/' + commandMessage.streamName.split('?')[0];
-        this.playArgs = qs.parse(commandMessage.streamName.split('?')[1]);
+        this.streamPath =
+          '/' + this.appName + '/' + commandMessage.streamName.split('?')[0];
+        this.streamArgs = qs.parse(commandMessage.streamName.split('?')[1]);
         this.playStreamId = streamID;
         // console.log('play streamID=' + streamID);
         this.emit('play');
@@ -996,19 +975,23 @@ export class NodeRtmpSession extends EventEmitter {
 
   protected onConnect(cmdObj) {
     cmdObj.app = cmdObj.app.replace('/', '');
+
     this.nodeEvent.emit('preConnect', this.id, cmdObj);
-    if (!this.isStarting) {
+
+    if (!this.isActive) {
       return;
     }
+
+    this.sessionType = SessionTypeEnum.ACCEPTED;
+
     this.connectCmdObj = cmdObj;
-    this.appname = cmdObj.app;
+    this.appName = cmdObj.app;
     this.objectEncoding = cmdObj.objectEncoding ? cmdObj.objectEncoding : 0;
     this.sendWindowACK(5000000);
     this.setPeerBandwidth(5000000, 2);
     this.setChunkSize(this.outChunkSize);
     this.respondConnect();
     this.startTimestamp = Date.now();
-    this.connectTime = new Date();
     this.pingInterval = setInterval(() => {
       this.pingRequest();
     }, this.ping);
@@ -1020,17 +1003,19 @@ export class NodeRtmpSession extends EventEmitter {
     this.nodeEvent.emit(
       'prePublish',
       this.id,
-      this.publishStreamPath,
-      this.publishArgs,
+      this.streamPath,
+      this.streamArgs,
     );
 
-    if (!this.isStarting) {
+    if (!this.isActive) {
       return;
     }
 
-    if (this.publishers.has(this.publishStreamPath)) {
+    this.sessionType = SessionTypeEnum.PUBLISHER;
+
+    if (this.publishers.has(this.streamPath)) {
       console.log(
-        '[rtmp publish] Already has a stream path ' + this.publishStreamPath,
+        '[rtmp publish] Already has a stream path ' + this.streamPath,
       );
       this.sendStatusMessage(
         this.publishStreamId,
@@ -1049,23 +1034,23 @@ export class NodeRtmpSession extends EventEmitter {
     } else {
       console.log(
         '[rtmp publish] new stream path ' +
-          this.publishStreamPath +
+          this.streamPath +
           ' streamId:' +
           this.publishStreamId,
       );
-      this.publishers.set(this.publishStreamPath, this.id);
+      this.publishers.set(this.streamPath, this.id);
       this.isPublishing = true;
       this.players = new Set();
       this.sendStatusMessage(
         this.publishStreamId,
         'status',
         'NetStream.Publish.Start',
-        `${this.publishStreamPath} is now published.`,
+        `${this.streamPath} is now published.`,
       );
       for (const idlePlayerId of this.idlePlayers) {
         const idlePlayer = this.sessions.get(idlePlayerId);
 
-        if (idlePlayer.playStreamPath === this.publishStreamPath) {
+        if (idlePlayer.streamPath === this.streamPath) {
           idlePlayer.emit('play');
           this.idlePlayers.delete(idlePlayerId);
         }
@@ -1073,18 +1058,20 @@ export class NodeRtmpSession extends EventEmitter {
       this.nodeEvent.emit(
         'postPublish',
         this.id,
-        this.publishStreamPath,
-        this.publishArgs,
+        this.streamPath,
+        this.streamArgs,
       );
     }
   }
 
   protected onPlay() {
-    this.nodeEvent.emit('prePlay', this.id, this.playStreamPath, this.playArgs);
+    this.nodeEvent.emit('prePlay', this.id, this.streamPath, this.streamArgs);
 
-    if (!this.isStarting) {
+    if (!this.isActive) {
       return;
     }
+
+    this.sessionType = SessionTypeEnum.SUBSCRIBER;
 
     if (this.isPlaying) {
       console.log('[rtmp play] NetConnection is playing');
@@ -1094,10 +1081,10 @@ export class NodeRtmpSession extends EventEmitter {
         'NetStream.Play.BadConnection',
         'Connection already playing',
       );
-    } else if (!this.publishers.has(this.playStreamPath)) {
+    } else if (!this.publishers.has(this.streamPath)) {
       console.log(
         '[rtmp play] stream not found ' +
-          this.playStreamPath +
+          this.streamPath +
           ' streamId:' +
           this.playStreamId,
       );
@@ -1111,12 +1098,12 @@ export class NodeRtmpSession extends EventEmitter {
           this.playStreamId,
           'status',
           'NetStream.Play.PublishNotify',
-          `${this.publishStreamPath} is now published.`,
+          `${this.streamPath} is now published.`,
         );
       } else {
         this.respondPlay();
       }
-      const publisherPath = this.publishers.get(this.playStreamPath);
+      const publisherPath = this.publishers.get(this.streamPath);
       const publisher = this.sessions.get(publisherPath);
       const players = publisher.players;
 
@@ -1182,7 +1169,7 @@ export class NodeRtmpSession extends EventEmitter {
 
       console.log(
         '[rtmp play] join stream ' +
-          this.playStreamPath +
+          this.streamPath +
           ' streamId:' +
           this.playStreamId,
       );
@@ -1190,8 +1177,8 @@ export class NodeRtmpSession extends EventEmitter {
       this.nodeEvent.emit(
         'postPlay',
         this.id,
-        this.playStreamPath,
-        this.playArgs,
+        this.streamPath,
+        this.streamArgs,
       );
     }
   }
@@ -1216,7 +1203,7 @@ export class NodeRtmpSession extends EventEmitter {
         'NetStream.Play.Stop',
         'Stopped playing stream.',
       );
-      const publisherPath = this.publishers.get(this.playStreamPath);
+      const publisherPath = this.publishers.get(this.streamPath);
 
       if (publisherPath) {
         this.sessions.get(publisherPath).players.delete(this.id);
@@ -1226,8 +1213,8 @@ export class NodeRtmpSession extends EventEmitter {
       this.nodeEvent.emit(
         'donePlay',
         this.id,
-        this.playStreamPath,
-        this.playArgs,
+        this.streamPath,
+        this.streamArgs,
       );
     }
 
@@ -1236,7 +1223,7 @@ export class NodeRtmpSession extends EventEmitter {
         this.publishStreamId,
         'status',
         'NetStream.Unpublish.Success',
-        `${this.publishStreamPath} is now unpublished.`,
+        `${this.streamPath} is now unpublished.`,
       );
       for (const playerId of this.players) {
         const player = this.sessions.get(playerId);
@@ -1268,15 +1255,14 @@ export class NodeRtmpSession extends EventEmitter {
       }
 
       this.players.clear();
-      this.players = null;
-      this.publishers.delete(this.publishStreamPath);
+      this.publishers.delete(this.streamPath);
       this.isPublishing = false;
       this.publishStreamId = del ? 0 : this.publishStreamId;
       this.nodeEvent.emit(
         'donePublish',
         this.id,
-        this.publishStreamPath,
-        this.publishArgs,
+        this.streamPath,
+        this.streamArgs,
       );
     }
   }

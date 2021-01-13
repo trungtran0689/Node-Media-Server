@@ -4,7 +4,6 @@
 
 import { EventEmitter } from 'events';
 
-import { nodeEvent } from './node_core_utils';
 import { NodeHttpServer } from './node_http_server';
 import { NodeRtmpServer } from './node_rtmp_server';
 import { NodeRtmpSession } from './node_rtmp_session';
@@ -13,10 +12,9 @@ import { NodeFlvSession } from './node_flv_session';
 export interface INodeMediaServerConfig {
   rtmp: {
     port: number;
-    chunk_size: number;
-    gop_cache: boolean;
+    chunkSize: number;
+    gopCache: boolean;
     ping: number;
-    ping_timeout: number;
   };
   http: {
     port: number | string;
@@ -26,8 +24,7 @@ export interface INodeMediaServerConfig {
   };
 }
 
-export type BaseSession = { userId?: string } & NodeRtmpSession &
-  NodeFlvSession;
+export type BaseSession = NodeRtmpSession & NodeFlvSession;
 
 export class NodeMediaServer {
   private readonly config: INodeMediaServerConfig;
@@ -46,7 +43,7 @@ export class NodeMediaServer {
     this.sessions = new Map();
     this.publishers = new Map();
     this.idlePlayers = new Set();
-    this.nodeEvent = nodeEvent;
+    this.nodeEvent = new EventEmitter();
   }
 
   run() {
@@ -56,6 +53,7 @@ export class NodeMediaServer {
         this.sessions,
         this.publishers,
         this.idlePlayers,
+        this.nodeEvent,
       );
 
       this.nrs.run();
@@ -67,6 +65,7 @@ export class NodeMediaServer {
         this.sessions,
         this.publishers,
         this.idlePlayers,
+        this.nodeEvent,
       );
 
       this.nhs.run();

@@ -2,6 +2,7 @@
 //  illuspas[a]gmail.com
 //  Copyright (c) 2017 Nodemedia. All rights reserved.
 
+import { EventEmitter } from 'events';
 import * as net from 'net';
 
 import { generateNewSessionID } from './node_core_utils';
@@ -14,9 +15,10 @@ export class NodeRtmpServer {
 
   constructor(
     config: INodeMediaServerConfig,
-    sessions: Map<string, BaseSession>,
-    publishers: Map<string, string>,
-    idlePlayers: Set<string>,
+    private readonly sessions: Map<string, BaseSession>,
+    private readonly publishers: Map<string, string>,
+    private readonly idlePlayers: Set<string>,
+    private readonly nodeEvent: EventEmitter,
   ) {
     this.port = config.rtmp.port;
 
@@ -30,6 +32,7 @@ export class NodeRtmpServer {
         sessions,
         publishers,
         idlePlayers,
+        nodeEvent,
       );
 
       sessions.set(id, session as BaseSession);

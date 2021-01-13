@@ -3,10 +3,9 @@ import { NodeMediaServer } from './src/node_media_server';
 const config = {
   rtmp: {
     port: 1935,
-    chunk_size: 60000,
-    gop_cache: true,
+    chunkSize: 60000,
+    gopCache: true,
     ping: 60,
-    ping_timeout: 30,
   },
   http: {
     port: 8000,
