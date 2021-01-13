@@ -17,7 +17,7 @@ import { EventEmitter } from 'events';
 export class NodeHttpServer {
   private readonly port: number | string;
 
-  private readonly expressApp: Express;
+  public readonly expressApp: Express;
   private httpServer: http.Server;
   private wsServer: ws.Server;
 
