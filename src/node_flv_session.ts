@@ -78,8 +78,7 @@ export class NodeFlvSession extends EventEmitter {
   public run() {
     const method = this.req.method;
     const urlInfo = url.parse(this.req.url, true);
-    const streamPath = urlInfo.pathname.split('.')[0];
-    const format = urlInfo.pathname.split('.')[1];
+    const [streamPath, format] = urlInfo.pathname.split('.');
 
     this.connectCmdObj = { method, streamPath, query: urlInfo.query };
     this.nodeEvent.emit('preConnect', this.id, this.connectCmdObj);
@@ -99,19 +98,10 @@ export class NodeFlvSession extends EventEmitter {
 
     switch (method) {
       case 'GET': {
-        //Play
         this.streamPath = streamPath;
         this.streamArgs = urlInfo.query;
         console.log(`[${this.protocol} play] play stream ` + this.streamPath);
         this.emit('play');
-
-        return;
-      }
-      case 'POST': {
-        //Publish
-        console.log(`[${this.protocol}] Unsupported method=` + method);
-        this.res.statusCode = 405;
-        this.res.end();
 
         return;
       }
@@ -177,10 +167,6 @@ export class NodeFlvSession extends EventEmitter {
     this.res.end();
     this.idlePlayers.delete(this.id);
     this.sessions.delete(this.id);
-  }
-
-  private respondUnpublish() {
-    this.res.end();
   }
 
   protected onConnect() {

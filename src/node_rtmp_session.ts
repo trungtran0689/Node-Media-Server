@@ -224,7 +224,7 @@ export class NodeRtmpSession extends EventEmitter {
     const _c2 = this.bp.read(1536);
 
     console.log('[rtmp handshake] done');
-    console.log('[rtmp message parser]  start');
+    console.log('[rtmp message parser] start');
 
     this.bp.readBytes = 0;
 
@@ -264,7 +264,7 @@ export class NodeRtmpSession extends EventEmitter {
 
         message.chunkStreamID = (exCSID[1] << 8) + exCSID[0] + 64;
       } else {
-        // Chunk basic header 1  2-63
+        // Chunk basic header 1 2-63
       }
 
       previousChunk = this.previousChunkMessage[message.chunkStreamID];
@@ -995,7 +995,7 @@ export class NodeRtmpSession extends EventEmitter {
     this.pingInterval = setInterval(() => {
       this.pingRequest();
     }, this.ping);
-    console.log('[rtmp connect]  app: ' + cmdObj.app);
+    console.log('[rtmp connect] app: ' + cmdObj.app);
     this.nodeEvent.emit('postConnect', this.id, cmdObj);
   }
 
